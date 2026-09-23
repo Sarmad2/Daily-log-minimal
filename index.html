@@ -1,0 +1,2546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Habits and tasks, logged every day. Works offline.">
+<meta name="theme-color" content="#f4f7f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e1815" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Daily Log">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preload" href="fonts/Outfit.ttf" as="font" type="font/ttf" crossorigin>
+<title>Daily Log</title>
+<style>
+@font-face{font-family:"Outfit";src:url("fonts/Outfit.ttf") format("truetype");font-weight:100 900;font-style:normal;font-display:swap}
+:root{
+  --accent:#34c27a;
+  --miss:#d97a6c;
+  --font:"Outfit",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --ease:cubic-bezier(.22,.85,.3,1);
+  --spring:cubic-bezier(.34,1.45,.64,1);
+  --r-lg:22px; --r-md:15px; --r-sm:11px;
+}
+html[data-theme="light"]{
+  --bg-a:#e6f1e9; --bg-b:#f4f7f4; --bg-c:#d9ebe4;
+  --ink:#12201a; --ink-2:#4c6157; --ink-3:#7b8f85;
+  --glass:rgba(255,255,255,.55); --glass-strong:rgba(255,255,255,.80); --glass-line:rgba(255,255,255,.72);
+  --hairline:rgba(18,32,26,.10); --shade:rgba(18,32,26,.05); --hover:rgba(18,32,26,.045);
+  --shadow:0 10px 30px -14px rgba(20,50,38,.30); --scroll:rgba(18,32,26,.16); --on-accent:#0a1712;
+}
+html[data-theme="dark"]{
+  --bg-a:#0a1210; --bg-b:#0e1815; --bg-c:#06100c;
+  --ink:#e8f2ec; --ink-2:#9fb3a9; --ink-3:#6d8279;
+  --glass:rgba(255,255,255,.05); --glass-strong:rgba(255,255,255,.085); --glass-line:rgba(255,255,255,.09);
+  --hairline:rgba(255,255,255,.085); --shade:rgba(255,255,255,.045); --hover:rgba(255,255,255,.055);
+  --shadow:0 18px 44px -22px rgba(0,0,0,.85); --scroll:rgba(255,255,255,.14); --on-accent:#06120c;
+}
+html.theming *{transition:background-color .45s ease,color .45s ease,border-color .45s ease,fill .45s ease !important}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html,body{height:100%}
+body{margin:0;font-family:var(--font);color:var(--ink);background:var(--bg-b);overflow:hidden}
+body::before,body::after{content:"";position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0}
+body::before{width:52vw;height:52vw;left:-12vw;top:-16vw;background:radial-gradient(circle,var(--accent),transparent 66%);opacity:.26;animation:drift 22s ease-in-out infinite alternate}
+body::after{width:46vw;height:46vw;right:-12vw;bottom:-18vw;background:radial-gradient(circle,var(--bg-c),transparent 68%);opacity:.9}
+@keyframes drift{to{transform:translate(6vw,4vh) scale(1.08)}}
+
+/* ---------------- shell ---------------- */
+.app{position:relative;z-index:1;height:100vh;display:grid;grid-template-columns:238px 1fr}
+aside{display:flex;flex-direction:column;gap:4px;padding:22px 16px 18px;border-right:1px solid var(--hairline);
+  background:var(--glass);backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%)}
+.brand{display:flex;align-items:center;gap:11px;padding:2px 8px 22px}
+.brand .mark{width:32px;height:32px;border-radius:10px;background:var(--accent);display:grid;place-items:center;flex:none;
+  box-shadow:0 8px 18px -8px color-mix(in srgb,var(--accent) 80%,transparent)}
+.brand .mark svg{width:17px;height:17px;stroke:var(--on-accent);fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.brand b{font-size:15.5px;font-weight:600;letter-spacing:-.3px;display:block;line-height:1.15}
+.brand span{font-size:11.5px;color:var(--ink-3)}
+#rail{position:relative}
+#rail .ind{position:absolute;left:0;right:0;top:0;height:0;border-radius:var(--r-md);pointer-events:none;
+  background:color-mix(in srgb,var(--accent) 16%,transparent);border:1px solid color-mix(in srgb,var(--accent) 34%,transparent);
+  transition:top .42s var(--spring),height .3s var(--ease)}
+.nav{position:relative;z-index:1;display:flex;align-items:center;gap:11px;width:100%;padding:10px 12px;margin-bottom:3px;
+  border-radius:var(--r-md);border:1px solid transparent;background:transparent;color:var(--ink-2);font-family:var(--font);
+  font-size:14px;font-weight:500;cursor:pointer;text-align:left;transition:color .2s,background .2s}
+.nav svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none;transition:transform .3s var(--spring)}
+.nav kbd{margin-left:auto;font-family:var(--font);font-size:10.5px;color:var(--ink-3);border:1px solid var(--hairline);border-radius:5px;padding:1px 5px;opacity:0;transition:opacity .18s}
+.nav:hover{color:var(--ink);background:var(--hover)}
+.nav:hover kbd{opacity:1}
+.nav:hover svg{transform:scale(1.12)}
+.nav[aria-current="true"]{color:var(--ink);background:transparent}
+.nav[aria-current="true"] svg{color:var(--accent)}
+.spacer{flex:1}
+.rail-foot{display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--hairline)}
+.set-row{padding:14px 0;border-bottom:1px solid var(--hairline)}
+.set-row:first-of-type{padding-top:0}
+.set-row .lbl{font-size:14px;margin-bottom:10px}
+.set-row .lbl small{display:block;font-size:12px;color:var(--ink-3);margin-top:3px;line-height:1.45}
+.tagedit .nm small{display:block;font-size:11.5px;color:var(--ink-3);margin-top:1px}
+.keys-list{display:grid;grid-template-columns:auto 1fr;gap:10px 14px;font-size:13.5px;align-items:center}
+.keys-list kbd{font-family:var(--font);font-size:12px;border:1px solid var(--hairline);background:var(--shade);border-radius:7px;padding:3px 9px;justify-self:start;white-space:nowrap}
+.rest-card{border-color:color-mix(in srgb,var(--accent) 38%,transparent)}
+.rest-row{display:flex;align-items:center;gap:14px}
+.rest-row .em{font-size:26px;line-height:1}
+.rest-row .tx{flex:1;min-width:0}
+.day.rest{outline:1.5px dashed color-mix(in srgb,var(--ink-3) 70%,transparent);outline-offset:-4px}
+
+main{display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.topbar{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;padding:26px 34px 18px;border-bottom:1px solid var(--hairline)}
+.topbar h1{margin:0;font-size:27px;font-weight:600;letter-spacing:-.7px;line-height:1.1}
+.topbar p{margin:3px 0 0;font-size:13.5px;color:var(--ink-2)}
+.topbar .acts{display:flex;gap:9px;align-items:center}
+.scroll{flex:1;overflow-y:auto;padding:24px 34px 48px;overscroll-behavior:contain}
+button,.chip,.nav,.day,.check,.sw{-webkit-tap-highlight-color:transparent}
+.scroll::-webkit-scrollbar{width:11px}
+.scroll::-webkit-scrollbar-thumb{background:var(--scroll);border-radius:99px;border:3px solid transparent;background-clip:content-box}
+.wrap{max-width:1120px;margin:0 auto}
+
+/* ---------------- primitives ---------------- */
+.card{background:var(--glass);border:1px solid var(--glass-line);
+  backdrop-filter:blur(22px) saturate(165%);-webkit-backdrop-filter:blur(22px) saturate(165%);
+  border-radius:var(--r-lg);box-shadow:var(--shadow);padding:22px}
+.card-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:16px}
+.card-head h2{margin:0;font-size:15.5px;font-weight:600;letter-spacing:-.2px}
+.card-head span{font-size:12.5px;color:var(--ink-3)}
+.sub{font-size:13px;color:var(--ink-3);margin:0;line-height:1.55}
+.cols{display:grid;gap:18px;align-items:start}
+.cols.a{grid-template-columns:352px minmax(0,1fr)}
+.cols.b{grid-template-columns:minmax(0,1fr) 336px}
+.cols.c{grid-template-columns:repeat(2,minmax(0,1fr))}
+.cols.e{grid-template-columns:repeat(4,minmax(0,1fr))}
+.stack>*+*{margin-top:18px}
+.mt{margin-top:18px}
+
+.icon-btn{width:38px;height:38px;border-radius:12px;border:1px solid var(--hairline);background:var(--glass-strong);
+  color:var(--ink);display:grid;place-items:center;cursor:pointer;transition:background .18s,transform .2s var(--spring)}
+.icon-btn:hover{background:var(--hover)}
+.icon-btn:active{transform:scale(.9)}
+.icon-btn:disabled{opacity:.35;cursor:default}
+.icon-btn.sm{width:30px;height:30px;border-radius:9px}
+.icon-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.icon-btn.sm svg{width:15px;height:15px}
+.btn{padding:11px 18px;border-radius:13px;border:1px solid transparent;background:var(--accent);color:var(--on-accent);
+  font-family:var(--font);font-size:13.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  transition:filter .18s,transform .2s var(--spring),box-shadow .2s}
+.btn:hover{filter:brightness(1.07);box-shadow:0 8px 20px -10px color-mix(in srgb,var(--accent) 80%,transparent)}
+.btn:active{transform:scale(.96)}
+.btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn.ghost{background:var(--shade);color:var(--ink);border-color:var(--hairline)}
+.btn.ghost:hover{background:var(--hover);filter:none;box-shadow:none}
+.btn.danger{background:transparent;color:var(--miss);border-color:color-mix(in srgb,var(--miss) 42%,transparent)}
+.btn.danger:hover{background:color-mix(in srgb,var(--miss) 12%,transparent);filter:none;box-shadow:none}
+.btn.wide{width:100%}
+.btn.tiny{padding:7px 12px;font-size:12px;border-radius:10px}
+.btn:disabled{opacity:.4;cursor:not-allowed;filter:none;box-shadow:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+input[type=text],input[type=date],select{width:100%;padding:11px 13px;border-radius:12px;border:1px solid var(--hairline);
+  background:var(--glass-strong);color:var(--ink);font-family:var(--font);font-size:14px;outline:none;transition:border-color .18s,box-shadow .18s}
+input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 16%,transparent)}
+input[type=color]{width:32px;height:32px;padding:0;border-radius:9px;border:1px solid var(--hairline);background:transparent;cursor:pointer;flex:none}
+label.fld{display:block;font-size:12.5px;color:var(--ink-2);margin:0 0 7px 2px}
+.fld-wrap{margin-bottom:16px}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{padding:8px 14px;border-radius:999px;border:1px solid var(--hairline);background:var(--shade);
+  font-family:var(--font);font-size:12.5px;color:var(--ink-2);cursor:pointer;display:inline-flex;align-items:center;gap:7px;
+  transition:background .18s,border-color .18s,transform .2s var(--spring)}
+.chip:hover{background:var(--hover)}
+.chip:active{transform:scale(.94)}
+.chip[aria-pressed="true"]{background:color-mix(in srgb,var(--accent) 20%,transparent);border-color:var(--accent);color:var(--ink)}
+.chip i{width:8px;height:8px;border-radius:50%;display:block;flex:none}
+.chip.sm{padding:6px 12px;font-size:12px}
+.pill{font-size:11.5px;padding:4px 11px;border-radius:999px;background:var(--shade);color:var(--ink-2);white-space:nowrap;font-weight:500;flex:none}
+
+/* ---------------- ring ---------------- */
+.ring-wrap{display:flex;align-items:center;gap:22px}
+.ring{position:relative;width:142px;height:142px;flex:none}
+.ring svg{transform:rotate(-90deg);width:100%;height:100%}
+.ring circle{fill:none;stroke-linecap:round}
+.ring .track{stroke:var(--shade);stroke-width:12}
+.ring .bar{stroke:var(--accent);stroke-width:12;transition:stroke-dashoffset 1s var(--ease);
+  filter:drop-shadow(0 0 6px color-mix(in srgb,var(--accent) 45%,transparent))}
+.ring .mid{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.ring .mid b{font-size:36px;font-weight:600;letter-spacing:-1.8px;font-variant-numeric:tabular-nums;line-height:1}
+.ring .mid small{font-size:11.5px;color:var(--ink-3);display:block;margin-top:5px}
+.facts{display:flex;flex-direction:column;gap:10px;min-width:0}
+.fact{display:flex;align-items:center;gap:10px;font-size:13.5px;color:var(--ink-2)}
+.fact b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums;min-width:16px}
+.dot{width:8px;height:8px;border-radius:50%;flex:none;display:inline-block}
+.moods{display:flex;gap:8px}
+.mood{flex:1;border:1px solid transparent;background:var(--shade);border-radius:13px;padding:11px 2px 8px;font-size:22px;
+  cursor:pointer;text-align:center;line-height:1;transition:background .18s,transform .25s var(--spring)}
+.mood small{display:block;font-size:10px;margin-top:6px;color:var(--ink-3);font-family:var(--font)}
+.mood:hover{background:var(--hover);transform:translateY(-2px)}
+.mood:active{transform:scale(.9)}
+.mood[aria-pressed="true"]{background:color-mix(in srgb,var(--accent) 20%,transparent);border-color:color-mix(in srgb,var(--accent) 46%,transparent);transform:translateY(-2px)}
+
+/* ---------------- rows ---------------- */
+.section-label{font-size:12.5px;color:var(--ink-3);margin:0 0 10px 2px;font-weight:500;display:flex;justify-content:space-between;align-items:center}
+.group-head{display:flex;align-items:center;gap:9px;margin:20px 2px 9px;font-size:12.5px;font-weight:600;color:var(--ink-2)}
+.group-head:first-child{margin-top:0}
+.group-head .count{margin-left:auto;font-weight:500;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.row{display:flex;align-items:center;gap:14px;margin-bottom:9px;padding:12px 14px 12px 16px;border-radius:var(--r-md);
+  background:var(--glass-strong);border:1px solid var(--glass-line);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);transition:background .18s,border-color .18s,transform .2s var(--ease)}
+.row.live:hover{background:var(--hover);transform:translateX(2px)}
+.row .title{font-size:14.5px;font-weight:500;flex:1;min-width:0;cursor:pointer}
+.row:not(.live) .title{cursor:default}
+.row .title span{display:block;font-size:11.5px;color:var(--ink-3);font-weight:400;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row.is-done,.row.is-mini{background:var(--shade);border-color:transparent;backdrop-filter:none;-webkit-backdrop-filter:none}
+.row.is-done .title,.row.is-mini .title{color:var(--ink-2)}
+.row.is-done .title>:first-child{text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--accent) 55%,transparent)}
+.row.is-miss{background:transparent;border-color:color-mix(in srgb,var(--miss) 26%,transparent)}
+.row.is-miss .title{color:var(--ink-2)}
+.row .tools{display:flex;gap:6px;opacity:0;transform:translateX(6px);transition:opacity .18s,transform .25s var(--ease)}
+.row:hover .tools,.row:focus-within .tools{opacity:1;transform:none}
+.tbtn{height:28px;padding:0 10px;border-radius:9px;border:1px solid var(--hairline);background:var(--glass-strong);
+  font-family:var(--font);font-size:12px;font-weight:500;color:var(--ink-2);display:inline-flex;align-items:center;gap:5px;cursor:pointer;
+  transition:color .15s,border-color .15s,transform .2s var(--spring)}
+.tbtn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tbtn:hover{color:var(--accent);border-color:var(--accent)}
+.tbtn:active{transform:scale(.92)}
+
+.check{width:25px;height:25px;border-radius:8px;border:2px solid var(--ink-3);background:transparent;display:grid;
+  place-items:center;cursor:pointer;flex:none;padding:0;position:relative;
+  transition:background .2s var(--ease),border-color .2s,transform .2s var(--spring)}
+.check:hover{border-color:var(--accent);transform:scale(1.06)}
+.check svg{width:14px;height:14px;stroke:var(--on-accent);fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;
+  opacity:0;transform:scale(.4) rotate(-12deg);transition:all .3s var(--spring)}
+.check[data-state="done"]{background:var(--accent);border-color:var(--accent)}
+.check[data-state="done"] svg{opacity:1;transform:none}
+.check[data-state="mini"]{border-color:var(--accent);background:linear-gradient(135deg,var(--accent) 0 50%,transparent 50% 100%)}
+.check[data-state="miss"]{border-color:color-mix(in srgb,var(--miss) 60%,transparent)}
+.check[data-state="miss"]::after{content:"";position:absolute;width:11px;height:2px;border-radius:2px;background:var(--miss)}
+.check.ro{cursor:default}
+.check.ro:hover{border-color:var(--ink-3);transform:none}
+.check.ro[data-state="done"]:hover,.check.ro[data-state="mini"]:hover{border-color:var(--accent)}
+.empty{text-align:center;padding:38px 16px}
+.empty p{margin:0 0 5px;font-size:15px;font-weight:500}
+.empty small{color:var(--ink-3);font-size:13px}
+
+/* ---------------- month ---------------- */
+.month-nav{display:flex;align-items:center;gap:10px}
+.month-nav b{font-size:15.5px;font-weight:600;min-width:150px}
+.dow{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:8px}
+.dow span{text-align:center;font-size:11px;color:var(--ink-3)}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+.day{aspect-ratio:1.12;border-radius:12px;border:1px solid transparent;background:var(--shade);display:flex;flex-direction:column;
+  align-items:flex-start;justify-content:space-between;padding:8px 9px;font-size:12.5px;color:var(--ink-2);cursor:pointer;
+  font-variant-numeric:tabular-nums;font-family:var(--font);transition:transform .25s var(--spring),box-shadow .2s}
+.day:hover{transform:translateY(-3px) scale(1.03);box-shadow:var(--shadow)}
+.day.blank{background:transparent;cursor:default;pointer-events:none}
+.day.today{border-color:var(--accent);font-weight:600}
+.day.sel{box-shadow:0 0 0 2px var(--accent)}
+.day.future{opacity:.3;pointer-events:none}
+.day.has{color:var(--on-accent)}
+.day em{font-size:9.5px;font-style:normal;opacity:.72;font-weight:500}
+.legend{display:flex;align-items:center;gap:7px;margin-top:18px;font-size:11.5px;color:var(--ink-3)}
+.legend i{width:16px;height:16px;border-radius:5px;display:block}
+
+/* ---------------- stats ---------------- */
+.metric{display:flex;flex-direction:column;gap:6px}
+.metric .big{font-size:46px;font-weight:600;letter-spacing:-2.6px;line-height:1;font-variant-numeric:tabular-nums}
+.metric .cap{font-size:13px;color:var(--ink-3)}
+.delta{font-size:12.5px;font-weight:500;line-height:1.4}
+.delta.up{color:var(--accent)}
+.delta.down{color:var(--miss)}
+.delta.flat{color:var(--ink-3)}
+.chart{display:flex;align-items:flex-end;gap:4px;height:172px}
+.col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:2px;height:100%;position:relative}
+.col i{display:block;border-radius:4px;min-height:2px}
+.col .d{background:var(--accent)}
+.col .h{background:color-mix(in srgb,var(--accent) 50%,transparent)}
+.col .m{background:color-mix(in srgb,var(--miss) 55%,transparent)}
+.col .z{background:var(--shade);height:3px;border-radius:3px}
+.col:hover .tip{opacity:1;transform:translate(-50%,-6px)}
+.tip{position:absolute;bottom:100%;left:50%;transform:translate(-50%,0);opacity:0;pointer-events:none;
+  background:var(--glass-strong);border:1px solid var(--glass-line);backdrop-filter:blur(14px);border-radius:9px;
+  padding:6px 10px;font-size:11.5px;white-space:nowrap;box-shadow:var(--shadow);transition:all .16s var(--ease);z-index:3}
+.axis{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink-3);margin-top:12px}
+.keys{display:flex;gap:16px;font-size:12px;color:var(--ink-3);margin-top:6px;flex-wrap:wrap}
+.keys span{display:inline-flex;align-items:center;gap:6px}
+.wk{display:grid;grid-template-columns:repeat(7,1fr);gap:9px;text-align:center}
+.wk .bar{height:104px;background:var(--shade);border-radius:8px;position:relative;overflow:hidden;display:block}
+.wk .bar i{position:absolute;left:0;right:0;bottom:0;background:var(--accent);display:block}
+.wk .lb{font-size:11.5px;color:var(--ink-3);margin-top:8px;display:block}
+.wk .pc{font-size:12px;font-weight:600;margin-top:3px;display:block;font-variant-numeric:tabular-nums}
+.wk .em{font-size:20px;margin-top:8px;display:block}
+.tagrow{display:flex;align-items:center;gap:12px;margin-bottom:13px}
+.tagrow .name{font-size:13.5px;width:90px;flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:8px}
+.tagrow .name i{width:8px;height:8px;border-radius:50%;flex:none}
+.lane{flex:1;min-width:0}
+.tagbar{height:10px;border-radius:99px;overflow:hidden;display:flex;background:var(--shade);min-width:10px}
+.tagbar i{display:block;height:100%}
+.tagrow .num{font-size:12.5px;color:var(--ink-3);font-variant-numeric:tabular-nums;width:80px;text-align:right;flex:none}
+.trend{width:100%;height:auto;display:block;overflow:visible}
+.trend .ln{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
+.trend .avg{stroke:var(--ink-3);stroke-width:1;stroke-dasharray:4 4;opacity:.65}
+.trend .gl{stroke:var(--hairline);stroke-width:1}
+.trend .tx{font-family:var(--font);font-size:10.5px;fill:var(--ink-3)}
+.trend .pt{fill:var(--accent);stroke:var(--bg-b);stroke-width:2.5}
+.trend .pulse{fill:var(--accent);opacity:.35;transform-box:fill-box;transform-origin:center;animation:pulse 2.2s ease-out infinite}
+@keyframes pulse{0%{transform:scale(1);opacity:.4}100%{transform:scale(3.2);opacity:0}}
+.hrow{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.hrow .hn{width:150px;flex:none;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hrow .cells{flex:1;display:grid;gap:3px;min-width:0}
+.hrow .cells i{display:block;height:17px;border-radius:4px;background:var(--shade);transition:transform .2s var(--spring)}
+.hrow .cells i:hover{transform:scale(1.35);position:relative;z-index:2}
+.hrow .cells i.d{background:var(--accent)}
+.hrow .cells i.h{background:linear-gradient(135deg,var(--accent) 0 50%,color-mix(in srgb,var(--accent) 22%,transparent) 50% 100%)}
+.hrow .cells i.m{background:color-mix(in srgb,var(--miss) 40%,transparent)}
+.hrow .hr{width:44px;flex:none;text-align:right;font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.hkey{display:flex;gap:16px;font-size:12px;color:var(--ink-3);margin-top:14px;flex-wrap:wrap}
+.hkey span{display:inline-flex;align-items:center;gap:6px}
+.hkey i{width:12px;height:12px;border-radius:4px;display:block}
+.links .lk{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--hairline)}
+.links .lk:first-child{border-top:none;padding-top:0}
+.links .lk .ar{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;font-size:14px;flex:none;font-weight:600}
+.links .lk .ar.up{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
+.links .lk .ar.down{background:color-mix(in srgb,var(--miss) 16%,transparent);color:var(--miss)}
+.links .lk .tx{flex:1;min-width:0;font-size:13.5px}
+.links .lk .tx small{display:block;color:var(--ink-3);font-size:12px;margin-top:2px}
+.links .lk .df{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+table{width:100%;border-collapse:collapse}
+th{font-size:11.5px;font-weight:500;color:var(--ink-3);text-align:left;padding:0 10px 10px 0}
+th:last-child,td:last-child{text-align:right;padding-right:0}
+td{padding:11px 10px 11px 0;border-top:1px solid var(--hairline);font-size:13.5px;font-variant-numeric:tabular-nums}
+td.name{font-weight:500;font-variant-numeric:normal}
+td.name small{display:block;font-size:11.5px;font-weight:400;color:var(--ink-3);margin-top:2px}
+td small.mi{color:var(--ink-3);font-size:11.5px;margin-left:4px}
+tbody tr{transition:background .15s}
+tbody tr:hover{background:var(--hover)}
+.mini-track{width:64px;height:7px;border-radius:99px;background:var(--shade);overflow:hidden;display:inline-block;vertical-align:middle;margin-right:9px}
+.mini-track i{display:block;height:100%;background:var(--accent)}
+.flame{color:var(--accent);font-weight:600}
+
+.switch{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 0;border-bottom:1px solid var(--hairline)}
+.switch .lbl{font-size:14px}
+.switch .lbl small{display:block;font-size:12px;color:var(--ink-3);margin-top:2px}
+.toggle{width:48px;height:28px;border-radius:99px;background:var(--shade);border:1px solid var(--hairline);position:relative;cursor:pointer;flex:none;padding:0}
+.toggle i{position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:var(--ink-3);transition:all .3s var(--spring)}
+.toggle[aria-pressed="true"]{background:color-mix(in srgb,var(--accent) 28%,transparent);border-color:var(--accent)}
+.toggle[aria-pressed="true"] i{left:22px;background:var(--accent)}
+.swatches{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;width:100%;}
+.sw{width:100%;min-width:0;min-height:54px;border-radius:13px;border:1px solid color-mix(in srgb,var(--ink) 12%,transparent);cursor:pointer;transition:transform .2s var(--spring),border-color .2s,box-shadow .2s;position:relative;display:flex;align-items:flex-end;justify-content:center;padding:0 6px 7px;background:var(--swatch);color:#fff;font:600 10px var(--font);text-shadow:0 1px 2px rgba(0,0,0,.25)}
+.sw:hover{transform:translateY(-2px)}
+.sw[aria-pressed="true"]{border:2px solid var(--ink);box-shadow:0 0 0 2px var(--bg-b),0 0 0 4px var(--ink)}
+.sw.custom{align-items:center;color:var(--ink);text-shadow:none;background:var(--shade)}
+.settings-dialog{overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box;max-width:calc(100vw - 28px)}
+.settings-dialog *{box-sizing:border-box;min-width:0;max-width:100%}
+.settings-dialog .settings-theme,.settings-dialog .chips{width:100%;}
+.settings-dialog .chips{display:flex;flex-wrap:wrap;gap:8px}
+.settings-dialog .chips .chip{max-width:100%;}
+.settings-dialog .tagadd{min-width:0}
+.settings-dialog .tagadd input{min-width:0;flex:1}
+
+.tagedit{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--hairline)}
+.tagedit .nm{flex:1;font-size:13.5px}
+.tagadd{display:flex;gap:8px;margin-top:12px}
+
+/* ---------------- dialog / toast ---------------- */
+.scrim{position:fixed;inset:0;background:rgba(6,16,12,.45);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:40;opacity:0;pointer-events:none;transition:opacity .28s var(--ease)}
+.scrim.on{opacity:1;pointer-events:auto}
+.dialog{position:fixed;left:50%;top:50%;z-index:41;width:min(456px,calc(100vw - 40px));max-height:88vh;overflow-y:auto;overflow-x:hidden;
+  transform:translate(-50%,-47%) scale(.94);opacity:0;pointer-events:none;background:var(--glass-strong);
+  border:1px solid var(--glass-line);backdrop-filter:blur(30px) saturate(180%);-webkit-backdrop-filter:blur(30px) saturate(180%);
+  border-radius:24px;padding:26px;box-shadow:0 40px 80px -30px rgba(0,0,0,.55);transition:opacity .22s var(--ease),transform .42s var(--spring)}
+.dialog.wide{width:min(560px,calc(100vw - 40px))}
+.dialog.on{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.dialog h3{margin:0 0 4px;font-size:20px;font-weight:600;letter-spacing:-.4px}
+.dialog .sub{margin-bottom:20px}
+.settings-dialog{width:min(620px,calc(100vw - 28px));padding:22px;max-height:84vh}
+.settings-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding-bottom:17px;margin-bottom:8px;border-bottom:1px solid var(--hairline)}
+.settings-hero h3{font-size:22px;margin-bottom:5px}
+.settings-section{padding:15px 0;border-bottom:1px solid var(--hairline)}
+.settings-section:last-of-type{border-bottom:0}
+.settings-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:11px}
+.settings-section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3)}
+.settings-section-desc{font-size:11.5px;color:var(--ink-3);margin-top:2px}
+.settings-theme{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.settings-theme .chip{justify-content:center;min-height:38px}
+.settings-footer{display:flex;justify-content:flex-end;padding-top:15px}
+@media(max-width:560px){.settings-dialog{padding:18px}.settings-theme{grid-template-columns:1fr 1fr}.settings-theme .chip:last-child{grid-column:1/-1}}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sc-prev{display:grid;place-items:center;min-height:200px;margin-bottom:16px}
+.sc-prev img{max-width:100%;max-height:52vh;border-radius:16px;box-shadow:0 20px 40px -20px rgba(0,0,0,.6);animation:rise .5s var(--ease) both}
+.toast{position:fixed;right:26px;bottom:26px;z-index:50;padding:12px 18px;border-radius:14px;font-size:13.5px;font-weight:500;
+  background:var(--glass-strong);border:1px solid var(--glass-line);color:var(--ink);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  box-shadow:var(--shadow);opacity:0;transform:translateY(14px) scale(.96);pointer-events:none;transition:opacity .25s var(--ease),transform .4s var(--spring)}
+.toast.on{opacity:1;transform:none}
+.toast.action{padding:7px 8px 7px 14px;display:flex;align-items:center;gap:12px}
+.toast .toast-act{border:1px solid var(--hairline);background:var(--shade);color:var(--ink);border-radius:9px;padding:6px 10px;font:600 12px var(--font);cursor:pointer}
+.toast .toast-act:hover{background:var(--hover)}
+.quickbar{display:flex;gap:9px;align-items:center;margin-bottom:14px}
+.quickbar .searchbox{position:relative;flex:1;min-width:180px}
+.quickbar .searchbox svg{position:absolute;left:12px;top:50%;width:16px;height:16px;transform:translateY(-50%);stroke:var(--ink-3);fill:none;stroke-width:1.8;pointer-events:none}
+.quickbar input{padding-left:38px}
+.quickbar .qadd{display:flex;gap:8px;flex:none}
+.quickbar .qadd input{width:210px}
+.quickbar .qhint{font-size:11px;color:var(--ink-3);white-space:nowrap}
+.filterbar{display:flex;gap:7px;flex-wrap:wrap;margin:-2px 0 14px}
+.filterbar .chip{padding:6px 11px}
+
+.quick-empty{margin-top:8px}
+@media(max-width:620px){
+  .quickbar{align-items:stretch;flex-direction:column}
+  .quickbar .qadd{width:100%}
+  .quickbar .qadd input{width:auto;flex:1}
+  .quickbar .qhint{display:none}
+}
+
+/* ---------------- focus timer ---------------- */
+.focus{position:fixed;inset:0;z-index:45;display:grid;place-items:center;
+  background:color-mix(in srgb,var(--bg-b) 70%,transparent);backdrop-filter:blur(28px) saturate(150%);-webkit-backdrop-filter:blur(28px) saturate(150%);
+  opacity:0;pointer-events:none;transition:opacity .35s var(--ease)}
+.focus.on{opacity:1;pointer-events:auto}
+.focus .panel{width:min(470px,calc(100vw - 40px));text-align:center;transform:scale(.94) translateY(12px);transition:transform .5s var(--spring)}
+.focus.on .panel{transform:none}
+.fhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.fkind{font-size:12.5px;color:var(--ink-3);letter-spacing:.4px;text-transform:uppercase;font-weight:600}
+.ftitle{margin:6px 0 10px;font-size:26px;font-weight:600;letter-spacing:-.6px}
+.fring{position:relative;width:280px;height:280px;margin:22px auto 20px}
+.fring svg{transform:rotate(-90deg);width:100%;height:100%;position:relative}
+.fring circle{fill:none;stroke-linecap:round}
+.fring .track{stroke:var(--shade);stroke-width:10}
+.fring .bar{stroke:var(--accent);stroke-width:10;transition:stroke-dashoffset .35s linear}
+.brk .fring .bar{stroke:#6aa8f0}
+.fring .glow{position:absolute;inset:26px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--accent) 30%,transparent),transparent 70%);opacity:0;transition:opacity .6s}
+.running .fring .glow{opacity:1;animation:breathe 4s ease-in-out infinite}
+@keyframes breathe{50%{transform:scale(1.08);opacity:.55}}
+.fring .mid{position:absolute;inset:0;display:grid;place-content:center}
+.fring .time{font-size:64px;font-weight:600;letter-spacing:-3px;font-variant-numeric:tabular-nums;line-height:1}
+.fring .state{font-size:13px;color:var(--ink-3);margin-top:10px}
+.fpresets{justify-content:center;margin-bottom:18px}
+.fctl{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.fauto{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:20px;font-size:13px;color:var(--ink-2);cursor:pointer}
+.fmeta{margin-top:16px}
+.focus-pill{position:fixed;left:24px;bottom:24px;z-index:44;display:flex;align-items:center;gap:9px;padding:10px 16px 10px 13px;
+  border-radius:99px;border:1px solid var(--glass-line);background:var(--glass-strong);color:var(--ink);font-family:var(--font);font-size:13px;
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:var(--shadow);cursor:pointer;animation:rise .4s var(--spring) both}
+.focus-pill b{font-variant-numeric:tabular-nums;font-weight:600}
+.focus-pill span:last-child{color:var(--ink-3);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pdot{width:8px;height:8px;border-radius:50%;background:var(--ink-3)}
+.pdot.live{background:var(--accent);animation:blink 1.4s ease-in-out infinite}
+@keyframes blink{50%{opacity:.3}}
+#confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:60}
+
+/* ---------------- motion ---------------- */
+@keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes grow{from{transform:scaleY(0)}to{transform:none}}
+@keyframes growx{from{transform:scaleX(0)}to{transform:none}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes cellin{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:none}}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes pop{0%{transform:scale(1)}35%{transform:scale(1.32)}100%{transform:scale(1)}}
+@keyframes leave{to{opacity:0;transform:translateX(28px) scale(.98)}}
+@keyframes leaveb{to{opacity:0;transform:translateX(-20px)}}
+@keyframes arrive{0%{opacity:0;transform:translateY(-8px) scale(.97);box-shadow:0 0 0 2px var(--accent)}60%{box-shadow:0 0 0 2px var(--accent)}100%{opacity:1;transform:none;box-shadow:0 0 0 0 transparent}}
+#view.anim .card,#view.anim .row,#view.anim .group-head,#view.anim .section-label,#view.anim .hrow{animation:rise .5s var(--ease) both;animation-delay:calc(var(--i,0) * 34ms)}
+#view.anim .col i{animation:grow .7s var(--ease) both;transform-origin:bottom;animation-delay:calc(var(--j,0) * 14ms + 160ms)}
+#view.anim .wk .bar i{animation:grow .8s var(--ease) both;transform-origin:bottom;animation-delay:220ms}
+#view.anim .tagbar{animation:growx .8s var(--ease) both;transform-origin:left;animation-delay:220ms}
+#view.anim .mini-track i{animation:growx .8s var(--ease) both;transform-origin:left;animation-delay:300ms}
+#view.anim .trend .ln{stroke-dasharray:1;stroke-dashoffset:1;animation:draw 1.2s var(--ease) .2s forwards}
+#view.anim .trend .ar{animation:fade 1s ease .5s both}
+#view.anim .day{animation:cellin .45s var(--spring) both;animation-delay:calc(var(--k,0) * 11ms + 80ms)}
+.check.pop{animation:pop .42s var(--spring)}
+.row.leaving{animation:leave .26s var(--ease) forwards}
+.row.leaving-back{animation:leaveb .22s var(--ease) forwards}
+.row.arrive{animation:arrive .8s var(--ease) both}
+
+@media(max-width:700px){
+  html,body{overflow-x:hidden}
+  .app{display:block;min-height:100dvh}
+  aside{position:fixed;left:0;right:0;bottom:0;top:auto;height:calc(68px + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px) !important;z-index:30;display:flex;flex-direction:row;align-items:center;padding:0 8px;border-right:0;border-top:1px solid var(--glass-line);background:var(--glass-strong);backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%)}
+  aside .brand,aside .spacer{display:none}
+  aside nav{display:flex;flex:1;height:100%;padding:0;overflow:hidden}
+  aside nav #navs{display:flex;align-items:center;justify-content:space-around;width:100%;gap:4px}
+  aside .ind{display:none}
+  .nav{height:54px;min-width:42px;flex:1;justify-content:center;padding:6px 4px;border-radius:13px;flex-direction:column;gap:3px}
+  .nav span{display:block!important;font-size:9px;line-height:1;white-space:nowrap}
+  .nav kbd{display:none!important}
+  .nav svg{width:19px;height:19px}
+  .rail-foot{display:flex;flex-direction:row;gap:5px;margin:0}
+  .rail-foot .icon-btn{width:42px;height:42px}
+  main{min-height:100dvh;padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+  .topbar{padding:calc(16px + env(safe-area-inset-top,0px)) 16px 10px;position:sticky;top:0;z-index:15;background:color-mix(in srgb,var(--bg-b) 88%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+  .scroll{padding:8px 14px 24px}
+  .wrap{max-width:none}
+  .quickbar .qadd input{min-width:0}
+  .settings-dialog{width:calc(100vw - 20px);max-height:calc(100dvh - 28px);padding:17px;border-radius:20px}
+  .settings-hero{gap:8px}
+  .settings-theme{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .swatches{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .sw{min-height:52px}
+  .settings-section{padding:13px 0}
+  .settings-section-head{align-items:flex-start}
+  .settings-dialog .tagadd{display:flex}
+  .settings-dialog .tagadd .btn{flex:none}
+  .dialog{width:calc(100vw - 20px);max-height:calc(100dvh - 24px);padding:18px;border-radius:20px}
+}
+
+@media (prefers-reduced-motion:reduce){*{transition-duration:.01ms !important;animation-duration:.01ms !important;animation-delay:0ms !important}}
+@media (max-width:1080px){.cols.a,.cols.b{grid-template-columns:minmax(0,1fr)}.cols.e{grid-template-columns:repeat(2,minmax(0,1fr))}.app{grid-template-columns:210px 1fr}}
+@media (max-width:820px){
+  .app{grid-template-columns:68px 1fr}
+  .brand b,.brand span,.nav span,.nav kbd{display:none}
+  .brand{justify-content:center;padding-left:0}
+  .nav{justify-content:center;padding:11px 0}
+  .rail-foot{flex-direction:column}
+  .cols.c,.cols.e{grid-template-columns:minmax(0,1fr)}
+  .topbar,.scroll{padding-left:20px;padding-right:20px}
+  .hrow .hn{width:100px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand">
+      <span class="mark"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+      <span><b>Daily Log</b><span>Nothing gets forgotten</span></span>
+    </div>
+    <nav id="rail"><div class="ind" id="ind"></div><div id="navs"></div></nav>
+    <div class="spacer"></div>
+    <div class="rail-foot">
+      <button class="icon-btn" id="themeBtn" title="Theme (T)"></button>
+    </div>
+  </aside>
+  <main>
+    <div class="topbar">
+      <div><h1 id="h-title">Today</h1><p id="h-sub">—</p></div>
+      <div class="acts" id="topActs"></div>
+    </div>
+    <div class="scroll"><div class="wrap" id="view"></div></div>
+  </main>
+</div>
+<div class="scrim" id="scrim"></div>
+<div class="dialog" id="dialog" role="dialog" aria-modal="true"></div>
+<div class="focus" id="focus" aria-hidden="true"></div>
+<button class="focus-pill" id="focusPill" hidden></button>
+<canvas id="confetti"></canvas>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+/* ============================ storage ============================ */
+const mem = new Map();
+function probeClaude(){ try{ return !!(window.storage && typeof window.storage.get === "function"); }catch(e){ return false; } }
+function probeLocal(){ try{ localStorage.setItem("dl:probe","1"); localStorage.removeItem("dl:probe"); return true; }catch(e){ return false; } }
+const BACKEND = probeClaude() ? "claude" : probeLocal() ? "local" : "memory";
+const BACKEND_LABEL = { claude:"Claude storage", local:"this browser's local storage", memory:"memory only — nothing is saved" }[BACKEND];
+const S = {
+  async get(k){
+    try{
+      if(BACKEND==="claude"){ const r = await window.storage.get(k); return r ? JSON.parse(r.value) : null; }
+      const raw = BACKEND==="local" ? localStorage.getItem(k) : (mem.get(k) ?? null);
+      return raw ? JSON.parse(raw) : null;
+    }catch(e){ return null; }
+  },
+  async set(k,v){
+    const s = JSON.stringify(v);
+    try{
+      if(BACKEND==="claude"){ await window.storage.set(k,s,false); return true; }
+      if(BACKEND==="local"){ localStorage.setItem(k,s); return true; }
+      mem.set(k,s); return true;
+    }catch(e){ return false; }
+  },
+  async del(k){
+    try{
+      if(BACKEND==="claude"){ await window.storage.delete(k,false); return; }
+      if(BACKEND==="local"){ localStorage.removeItem(k); return; }
+      mem.delete(k);
+    }catch(e){}
+  },
+  async keys(prefix){
+    try{
+      if(BACKEND==="claude"){ const r = await window.storage.list(prefix,false); return r && r.keys ? r.keys : []; }
+      if(BACKEND==="local") return Object.keys(localStorage).filter(k=>k.startsWith(prefix));
+      return [...mem.keys()].filter(k=>k.startsWith(prefix));
+    }catch(e){ return []; }
+  }
+};
+const K = { settings:"dl:settings", tasks:"dl:tasks", log:ym=>`dl:log:${ym}` };
+
+/* ============================ helpers ============================ */
+const $ = s => document.querySelector(s);
+const pad = n => String(n).padStart(2,"0");
+const keyOf = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parseKey = s => { const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); };
+const ymOf = s => s.slice(0,7);
+const shift = (d,n) => { const x=new Date(d.getTime()); x.setDate(x.getDate()+n); return x; };
+const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const wait = ms => new Promise(r=>setTimeout(r,ms));
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const DOW_SHORT = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const DOW_ORDER = [1,2,3,4,5,6,0];
+let DAY_END_H = 0;                               // "Day ends at" — 0 = midnight, up to 4 am
+let WEEK_START = 1;                              // 1 = Monday, 0 = Sunday
+const nowD = () => new Date(Date.now() - DAY_END_H*3600e3);
+const today = () => keyOf(nowD());
+const dowOrder = () => Array.from({length:7}, (_,i)=>(WEEK_START+i)%7);
+const prettyDate = s => { const d=parseKey(s); return `${DAYS[d.getDay()].slice(0,3)}, ${d.getDate()} ${MONTHS[d.getMonth()].slice(0,3)}`; };
+const longDate = s => { const d=parseKey(s); return `${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`; };
+const fmtMin = m => m<60 ? `${m}m` : `${Math.floor(m/60)}h${m%60?` ${m%60}m`:""}`;
+const reduced = (()=>{ try{ return window.matchMedia("(prefers-reduced-motion: reduce)").matches; }catch(e){ return false; } })();
+
+const CHECK = '<svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>';
+const TIMER = '<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>';
+const SHARE = '<svg viewBox="0 0 24 24"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v13"/></svg>';
+
+const MOODS = [["rough","😖"],["low","😕"],["fine","🙂"],["good","😄"],["great","🤩"]];
+const MOOD_VAL = { rough:1, low:2, fine:3, good:4, great:5 };
+const VAL = { done:1, mini:.5, miss:0 };
+const SWATCHES = [
+  {name:"Emerald", color:"#22c55e"},
+  {name:"Ocean", color:"#0ea5e9"},
+  {name:"Indigo", color:"#6366f1"},
+  {name:"Violet", color:"#8b5cf6"},
+  {name:"Rose", color:"#f43f5e"},
+  {name:"Coral", color:"#f97316"},
+  {name:"Amber", color:"#eab308"},
+  {name:"Teal", color:"#14b8a6"},
+  {name:"Slate", color:"#64748b"}
+];
+const DEFAULT_TAGS = [
+  { name:"health", color:"#34a97b" }, { name:"education", color:"#4d8df6" }, { name:"work", color:"#e07a3f" },
+  { name:"home", color:"#a96fd8" },   { name:"mind", color:"#22b5c6" },      { name:"money", color:"#d2a24c" }
+];
+
+/* ============================ state ============================ */
+const state = {
+  settings:{ accent:"#34c27a", mood:true, startTab:"today", theme:"system", lastRun:null, tags:null, groupByTag:true },
+  tasks:[], logs:{}, loaded:new Set(),
+  tab:"today", cursor:new Date(), selDay:null, range:30, dayKey:today(),
+  enter:false, lastPct:null, justDone:null,
+  taskQuery:"", taskTag:"all"
+};
+let saveTimer = {};
+
+function tagList(){ return state.settings.tags && state.settings.tags.length ? state.settings.tags : DEFAULT_TAGS; }
+function tagColor(name){
+  const t = tagList().find(x => x.name === name);
+  if(t) return t.color;
+  let h = 0; for(const ch of String(name||"")) h = (h*31 + ch.charCodeAt(0)) % 360;
+  return `hsl(${h} 42% 52%)`;
+}
+function tagPill(name){
+  const c = tagColor(name);
+  return `<span class="pill" style="background:color-mix(in srgb,${c} 17%,transparent);color:color-mix(in srgb,${c} 68%,var(--ink))">${esc(name)}</span>`;
+}
+const findTask = id => state.tasks.find(t=>t.id===id);
+
+async function ensureMonth(ym){
+  if(state.loaded.has(ym)) return;
+  const data = await S.get(K.log(ym));
+  if(data) Object.assign(state.logs, data);
+  state.loaded.add(ym);
+}
+function queueSaveMonth(ym){
+  clearTimeout(saveTimer[ym]);
+  saveTimer[ym] = setTimeout(()=>{
+    const bucket = {};
+    for(const k in state.logs) if(k.startsWith(ym)) bucket[k] = state.logs[k];
+    S.set(K.log(ym), bucket);
+  }, 260);
+}
+const saveTasks = () => S.set(K.tasks, state.tasks);
+const saveSettings = () => S.set(K.settings, state.settings);
+function dayLog(date){
+  if(!state.logs[date]) state.logs[date] = { mood:null, e:{} };
+  if(!state.logs[date].e) state.logs[date].e = {};
+  return state.logs[date];
+}
+
+/* ============================ schedules ============================ */
+function activeOn(t, ds){ return t.created<=ds && (!t.removed || t.removedAt>ds); }
+function isWeekly(t){ return t.repeat!=="once" && !!t.sched && t.sched.type==="weekly"; }
+function isRest(ds){ return (state.settings.rest||[]).some(p=>ds>=p.from && (!p.to || ds<=p.to)); }
+function currentRest(){ const t = today(); return (state.settings.rest||[]).find(p=>t>=p.from && (!p.to || t<=p.to)) || null; }
+function endRest(){
+  const s = state.settings, r = currentRest(); if(!r) return;
+  const y = keyOf(shift(parseKey(today()), -1));
+  if(y < r.from) s.rest = s.rest.filter(p=>p!==r); else r.to = y;
+  saveSettings(); toast("Welcome back 💪 today counts again");
+}
+function isExpected(t, ds){
+  if(t.repeat==="once") return t.date===ds && !t.removed;
+  if(isRest(ds)) return false;                    // rest days: nothing is due, nothing can be missed
+  if(!activeOn(t, ds)) return false;
+  const s = t.sched;
+  if(!s || s.type==="daily") return true;
+  if(s.type==="days") return s.days.includes(parseKey(ds).getDay());
+  return false;                                   // weekly: never "due" on a specific day
+}
+function expected(ds){ return state.tasks.filter(t=>isExpected(t, ds)); }
+const scheduled = expected;
+function weekStart(ds){ const d=parseKey(ds); return keyOf(shift(d, -((d.getDay()-WEEK_START+7)%7))); }
+function weekQuota(t, mon){
+  let active = 0;
+  for(let i=0;i<7;i++){ const k = keyOf(shift(parseKey(mon), i)); if(activeOn(t, k) && !isRest(k)) active++; }
+  return active ? Math.ceil(t.sched.n * active / 7) : 0;
+}
+function weekCount(t, mon, until){
+  let c = 0;
+  for(let i=0;i<7;i++){
+    const ds = keyOf(shift(parseKey(mon), i));
+    if(ds > until) break;
+    const s = statusOf(ds, t.id);
+    if(s==="done" || s==="mini") c++;
+  }
+  return c;
+}
+function weeklyActive(ds){ return state.tasks.filter(t=>isWeekly(t) && activeOn(t, ds)); }
+function schedText(t){
+  if(t.repeat==="once") return `On ${prettyDate(t.date)}`;
+  const s = t.sched;
+  if(!s || s.type==="daily") return "Every day";
+  if(s.type==="weekly") return `${s.n}× a week`;
+  const d = [...s.days].sort((a,b)=>dowOrder().indexOf(a)-dowOrder().indexOf(b));
+  const k = d.join(",");
+  if(k==="1,2,3,4,5") return "Weekdays";
+  if(k==="6,0") return "Weekends";
+  if(d.length===7) return "Every day";
+  return d.map(x=>DOW_SHORT[x]).join(" · ");
+}
+
+/* ============================ statuses ============================ */
+/* "done" | "mini" | "miss" | null. "open" entries carry only a note or focus time.
+   Legacy "skip" entries from earlier versions read as "miss". */
+function statusOf(date, id){
+  const L = state.logs[date]; if(!L || !L.e || !L.e[id]) return null;
+  const s = L.e[id].s;
+  if(s==="done" || s==="mini") return s;
+  if(s==="open") return null;
+  return "miss";
+}
+/* all outcomes for one task on one day — includes weekly-target shortfalls filed on Sundays */
+function taskStatuses(ds, id){
+  const L = state.logs[ds]; if(!L || !L.e) return [];
+  const out = []; const s = statusOf(ds, id); if(s) out.push(s);
+  const pre = id + "~w";
+  for(const k in L.e) if(k.startsWith(pre)) out.push("miss");
+  return out;
+}
+function focusMinutes(ds, id){
+  const L = state.logs[ds]; if(!L || !L.e) return 0;
+  if(id) return (L.e[id] && L.e[id].f) || 0;
+  let m = 0; for(const k in L.e) m += L.e[k].f || 0; return m;
+}
+function setMark(date, task, s){
+  const L = dayLog(date);
+  const prev = L.e[task.id] || {};
+  const n = prev.n || "", f = prev.f || 0;
+  if(s) L.e[task.id] = n ? { s, n, f, t:task.title, g:task.tag } : { s, f, t:task.title, g:task.tag };
+  else if(n || f) L.e[task.id] = { s:"open", n, f, t:task.title, g:task.tag };
+  else delete L.e[task.id];
+  queueSaveMonth(ymOf(date));
+}
+const setDone = (date, task, on) => setMark(date, task, on ? "done" : null);
+
+/* Closed days are read strictly from what was recorded, so editing a schedule
+   never rewrites history. Today (and later) uses the live schedule. */
+function dayStat(date){
+  const ids = new Set();
+  if(date >= today()) expected(date).forEach(t=>ids.add(t.id));
+  const L = state.logs[date];
+  if(L && L.e) for(const id in L.e) if(statusOf(date, id)) ids.add(id);
+  let done=0, mini=0, miss=0, open=0;
+  ids.forEach(id=>{
+    const s = statusOf(date, id);
+    if(s==="done") done++; else if(s==="mini") mini++; else if(s==="miss") miss++; else open++;
+  });
+  return { total:ids.size, done, mini, miss, open, score:done + mini*.5 };
+}
+
+/* ============================ midnight rollover ============================ */
+async function rollover(){
+  const t0 = today();
+  const last = state.settings.lastRun;
+  if(!last){ state.settings.lastRun = t0; await saveSettings(); return 0; }
+  if(last >= t0) return 0;
+  let cur = parseKey(last), n = 0, guard = 0;
+  const stop = parseKey(t0), touched = new Set();
+  while(cur < stop && guard++ < 70){
+    const ds = keyOf(cur);
+    await ensureMonth(ymOf(ds));
+    const due = expected(ds);
+    if(due.length){
+      const L = dayLog(ds);
+      due.forEach(task=>{
+        const e = L.e[task.id];
+        if(!e || e.s==="open"){
+          L.e[task.id] = { s:"miss", n:(e&&e.n)||"", f:(e&&e.f)||0, t:task.title, g:task.tag };
+          n++;
+        }
+      });
+      touched.add(ymOf(ds));
+    }
+    if(cur.getDay()===(WEEK_START+6)%7){ const k = await closeWeek(ds); if(k){ n += k; touched.add(ymOf(ds)); } }
+    cur = shift(cur, 1);
+  }
+  touched.forEach(queueSaveMonth);
+  state.settings.lastRun = t0;
+  await saveSettings();
+  return n;
+}
+/* at the end of each week, file any shortfall on weekly targets as misses on that Sunday */
+async function closeWeek(sunday){
+  const mon = keyOf(shift(parseKey(sunday), -6));
+  await ensureMonth(ymOf(mon));
+  let n = 0;
+  state.tasks.filter(isWeekly).forEach(t=>{
+    const q = weekQuota(t, mon); if(!q) return;
+    const deficit = Math.max(0, q - weekCount(t, mon, sunday));
+    if(!deficit) return;
+    let fileOn = sunday;                                  // never file a shortfall on a rest day
+    for(let i=0;i<7;i++){ const k = keyOf(shift(parseKey(sunday), -i)); if(!isRest(k)){ fileOn = k; break; } }
+    const L = dayLog(fileOn);
+    for(let k=1;k<=deficit;k++){
+      const key = `${t.id}~w${k}`;
+      if(!L.e[key]){ L.e[key] = { s:"miss", n:"", t:t.title, g:t.tag, w:1 }; n++; }
+    }
+    queueSaveMonth(ymOf(fileOn));
+  });
+  return n;
+}
+setInterval(async ()=>{
+  if(state.dayKey !== today()){
+    state.dayKey = today();
+    const n = await rollover();
+    go(state.tab);
+    toast(n ? `New day — ${n} unchecked task${n===1?"":"s"} marked missed` : "New day, fresh list");
+  }
+}, 30000);
+
+/* ============================ theme ============================ */
+const mq = window.matchMedia("(prefers-color-scheme: dark)");
+function applyTheme(animate){
+  const t = state.settings.theme;
+  const dark = t==="dark" || (t==="system" && mq.matches);
+  const root = document.documentElement;
+  if(animate && !reduced){ root.classList.add("theming"); setTimeout(()=>root.classList.remove("theming"), 500); }
+  root.dataset.theme = dark ? "dark" : "light";
+  root.style.setProperty("--accent", state.settings.accent);
+  const icons = {
+    system:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M12 3.6a8.4 8.4 0 0 1 0 16.8z" fill="currentColor" stroke="none"/></svg>',
+    light:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.2 4.2l1.5 1.5M18.3 18.3l1.5 1.5M2 12h2M20 12h2M4.2 19.8l1.5-1.5M18.3 5.7l1.5-1.5"/></svg>',
+    dark:'<svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>'
+  };
+  $("#themeBtn").innerHTML = icons[t];
+  document.querySelectorAll('meta[name="theme-color"]').forEach(m=>{ m.setAttribute("content", dark ? "#0e1815" : "#f4f7f4"); m.removeAttribute("media"); });
+  $("#themeBtn").title = `Theme: ${t} (T)`;
+}
+mq.addEventListener("change", ()=>{ if(state.settings.theme==="system") applyTheme(true); });
+function accentHex(){ const a = state.settings.accent || "#34c27a"; return /^#[0-9a-f]{6}$/i.test(a) ? a : "#34c27a"; }
+function hexA(hex, a){ const n = parseInt(hex.slice(1),16); return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`; }
+
+/* ============================ chrome ============================ */
+const TABS = [
+  ["today","Today",'<svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>'],
+  ["month","Month",'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>'],
+  ["library","Library",'<svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h10"/></svg>'],
+  ["stats","Stats",'<svg viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>'],
+  ["export","Export",'<svg viewBox="0 0 24 24"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>'],
+  ["settings","Settings",'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2v.2a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>']
+];
+function paintRail(instant){
+  $("#navs").innerHTML = TABS.map(([id,label,svg],i)=>
+    `<button class="nav" data-tab="${id}" aria-current="${state.tab===id}">${svg}<span>${label}</span><kbd>${i+1}</kbd></button>`).join("");
+  moveInd(instant);
+}
+function moveInd(instant){
+  const b = $("#navs .nav[aria-current='true']"), ind = $("#ind");
+  if(!b || !ind) return;
+  if(instant) ind.style.transition = "none";
+  ind.style.top = b.offsetTop + "px";
+  ind.style.height = b.offsetHeight + "px";
+  if(instant){ void ind.offsetWidth; ind.style.transition = ""; }
+}
+window.addEventListener("resize", ()=>moveInd(true));
+$("#navs").addEventListener("click", e=>{ const b=e.target.closest(".nav"); if(b) go(b.dataset.tab); });
+
+function toast(msg, actionText, actionFn){
+  const t = $("#toast");
+  t.classList.toggle("action", !!actionText);
+  t.innerHTML = `${esc(msg)}${actionText ? `<button class="toast-act">${esc(actionText)}</button>` : ""}`;
+  if(actionText && actionFn){
+    const b = t.querySelector(".toast-act");
+    if(b) b.onclick = ()=>{ actionFn(); t.classList.remove("on"); };
+  }
+  t.classList.remove("on"); void t.offsetWidth; t.classList.add("on");
+  clearTimeout(t._t); t._t = setTimeout(()=>t.classList.remove("on"), actionText ? 4200 : 2400);
+}
+function openDialog(html, wide){
+  const d = $("#dialog");
+  d.classList.toggle("wide", !!wide);
+  d.innerHTML = html; d.classList.add("on"); $("#scrim").classList.add("on");
+}
+function closeDialog(){ $("#dialog").classList.remove("on"); $("#scrim").classList.remove("on"); }
+$("#scrim").addEventListener("click", closeDialog);
+
+/* renders a view; on tab entry, stagger the cards in and count numbers up */
+const STAGGER = ".card,.row,.group-head,.section-label,.hrow";
+function paint(html){
+  const v = $("#view");
+  v.classList.remove("anim");
+  v.innerHTML = html;
+  if(state.enter && !reduced){
+    v.querySelectorAll(STAGGER).forEach((el,i)=>el.style.setProperty("--i", Math.min(i,18)));
+    void v.offsetWidth;
+    v.classList.add("anim");
+    clearTimeout(paint._t); paint._t = setTimeout(()=>v.classList.remove("anim"), 1700);
+    countUp(v);
+  }
+  state.enter = false;
+}
+function countUp(root){
+  root.querySelectorAll("[data-count]").forEach(el=>{
+    const target = parseFloat(el.dataset.count); if(isNaN(target)) return;
+    const pre = el.dataset.prefix || "", suf = el.dataset.suffix || "";
+    const t0 = performance.now(), dur = 900;
+    const step = now=>{
+      const p = Math.min(1, (now-t0)/dur), e = 1 - Math.pow(1-p, 3);
+      el.textContent = pre + Math.round(target*e) + suf;
+      if(p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+}
+
+document.addEventListener("keydown", e=>{
+  const typing = /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName||"");
+  if(focusOpen()){
+    if(e.key==="Escape"){ hideFocus(); return; }
+    if(e.key===" " && !typing && (focus.mode==="work"||focus.mode==="break")){
+      e.preventDefault(); focus.running ? focusPause() : focusStart(); return;
+    }
+    return;
+  }
+  if(e.key==="Escape"){ closeDialog(); return; }
+  if(typing || e.metaKey || e.ctrlKey || e.altKey) return;
+  const n = "123456".indexOf(e.key);
+  if(n > -1){ go(TABS[n][0]); return; }
+  if(e.key==="/" && state.tab==="today"){
+    e.preventDefault(); setTimeout(()=>$("#taskSearch")?.focus(),0); return;
+  }
+  if(e.key.toLowerCase()==="a" && state.tab==="today"){
+    e.preventDefault(); setTimeout(()=>$("#quickAdd")?.focus(),0); return;
+  }
+  if(e.key.toLowerCase()==="f" && state.tab==="today"){
+    e.preventDefault(); focusNext(); return;
+  }
+  if(e.key.toLowerCase()==="n" && (state.tab==="today"||state.tab==="library")) newTaskDialog();
+  if(e.key.toLowerCase()==="t") $("#themeBtn").click();
+});
+
+/* ============================ router ============================ */
+const addBtn = `<button class="btn" id="addBtn"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add task</button>`;
+const focusNextBtn = `<button class="btn ghost" id="focusNextBtn">${TIMER}Focus next</button>`;
+async function go(tab){
+  state.tab = tab; state.enter = true;
+  paintRail();
+  $(".scroll").scrollTop = 0;
+  const acts = $("#topActs");
+  if(tab==="today") acts.innerHTML = `${focusNextBtn}${addBtn}`;
+  else if(tab==="library") acts.innerHTML = addBtn;
+  else if(tab==="stats") acts.innerHTML = `<div class="chips" id="rangeC">${[7,30,90].map(r=>`<button class="chip sm" data-r="${r}" aria-pressed="${state.range===r}">${r} days</button>`).join("")}</div>`;
+  else if(tab==="month") acts.innerHTML = `<button class="btn ghost" id="shareTop">${SHARE}Share card</button>`;
+  else acts.innerHTML = "";
+  if($("#addBtn")) $("#addBtn").onclick = newTaskDialog;
+  if($("#focusNextBtn")) $("#focusNextBtn").onclick = focusNext;
+  if($("#shareTop")) $("#shareTop").onclick = ()=>shareDialog(`${state.cursor.getFullYear()}-${pad(state.cursor.getMonth()+1)}`);
+  if($("#rangeC")) $("#rangeC").onclick = e=>{ const b=e.target.closest(".chip"); if(b){ state.range = +b.dataset.r; go("stats"); } };
+  if(tab==="today")   await viewToday();
+  if(tab==="month")   await viewMonth();
+  if(tab==="library") viewLibrary();
+  if(tab==="stats")   await viewStats();
+  if(tab==="export")  await viewExport();
+  if(tab==="settings") viewSettings();
+}
+
+/* ============================ Today ============================ */
+async function viewToday(){
+  const date = today(), yest = keyOf(shift(nowD(),-1));
+  await ensureMonth(ymOf(date)); await ensureMonth(ymOf(yest)); await ensureMonth(ymOf(weekStart(date)));
+  const L = dayLog(date);
+  const exp = expected(date);
+  const resting = isRest(date), rest = currentRest();
+  const weekly = resting
+    ? state.tasks.filter(t=>t.repeat!=="once" && activeOn(t, date))
+    : weeklyActive(date).filter(t=>!exp.includes(t));
+  const logged = t=>{ const s = statusOf(date,t.id); return s==="done" || s==="mini"; };
+  const score = exp.reduce((a,t)=>a + (VAL[statusOf(date,t.id)] || 0), 0);
+  const pct = exp.length ? Math.round(score/exp.length*100) : 0;
+  const open = exp.filter(t=>!logged(t));
+  const wOpen = weekly.filter(t=>!logged(t));
+  const doneList = [...exp, ...weekly].filter(logged);
+  const nDone = exp.filter(t=>statusOf(date,t.id)==="done").length;
+  const nMini = exp.filter(t=>statusOf(date,t.id)==="mini").length;
+  const fMin = focusMinutes(date);
+  const yc = dayStat(yest);
+  const R = 62, C = 2*Math.PI*R, from = state.lastPct ?? 0;
+
+  $("#h-title").textContent = "Today";
+  $("#h-sub").textContent = longDate(date);
+
+  const rowOf = (t, status, meta) => rowHTML({
+    id:t.id, title:t.title, tag:t.tag, status, task:t, live:true,
+    note:(L.e[t.id]||{}).n, focusMin:(L.e[t.id]||{}).f || 0,
+    meta: status==="done" ? "Completed" : status==="mini" ? `Mini${t.mini?` · ${t.mini}`:""}` : (meta || schedText(t) + (t.mini?` · mini: ${t.mini}`:""))
+  });
+
+  let openBlock;
+  if(!open.length){
+    openBlock = exp.length
+      ? `<div class="card empty"><p>All clear 🌿</p><small>Everything due today is checked off.</small></div>`
+      : (weekly.length ? "" : `<div class="card empty"><p>No tasks yet</p><small>Add one to start building the record.</small></div>`);
+  }else if(state.settings.groupByTag!==false && open.length > 5){
+    const order = tagList().map(t=>t.name), groups = {};
+    open.forEach(t=>{ (groups[t.tag] = groups[t.tag] || []).push(t); });
+    const names = Object.keys(groups).sort((a,b)=>{
+      const ia = order.indexOf(a), ib = order.indexOf(b);
+      return (ia<0?99:ia) - (ib<0?99:ib) || a.localeCompare(b);
+    });
+    openBlock = names.map(g=>{
+      const all = exp.filter(t=>t.tag===g);
+      const gd = all.filter(logged).length;
+      return `<div class="group-head"><i class="dot" style="background:${tagColor(g)}"></i>${esc(g)}<span class="count">${gd}/${all.length}</span></div>
+        ${groups[g].map(t=>rowOf(t,null)).join("")}`;
+    }).join("");
+  }else{
+    openBlock = `<div class="section-label"><span>Open · ${open.length}</span><span>tick to complete</span></div>
+      ${open.map(t=>rowOf(t,null)).join("")}`;
+  }
+
+  const mon = weekStart(date);
+  const weeklyBlock = wOpen.length ? `
+    <div class="section-label" style="margin-top:22px"><span>Flexible this week · ${wOpen.length}</span><span>counts toward a weekly target</span></div>
+    ${wOpen.map(t=>{
+      const q = weekQuota(t, mon), c = weekCount(t, mon, date);
+      return rowOf(t, null, c>=q ? `${c}/${q} this week · target met ✓` : `${c}/${q} this week`);
+    }).join("")}` : "";
+
+  const matches = t => {
+    const q = state.taskQuery.trim().toLowerCase();
+    const tagOK = state.taskTag==="all" || t.tag===state.taskTag;
+    const textOK = !q || [t.title,t.tag,t.mini||""].some(v=>String(v).toLowerCase().includes(q));
+    return tagOK && textOK;
+  };
+  const vOpen = open.filter(matches);
+  const vWeekly = wOpen.filter(matches);
+  const vDone = doneList.filter(matches);
+  const tagFilters = tagList().filter(t=>[...exp,...weekly,...doneList].some(x=>x.tag===t.name));
+
+  const filteredOpenBlock = !vOpen.length
+    ? (open.length ? `<div class="card empty quick-empty"><p>No matching tasks</p><small>Try another search or tag.</small></div>` : openBlock)
+    : (state.settings.groupByTag!==false && vOpen.length > 5
+      ? [...new Set(vOpen.map(t=>t.tag))].sort((a,b)=>a.localeCompare(b)).map(g=>{
+          const all = exp.filter(t=>t.tag===g);
+          const gd = all.filter(logged).length;
+          return `<div class="group-head"><i class="dot" style="background:${tagColor(g)}"></i>${esc(g)}<span class="count">${gd}/${all.length}</span></div>
+            ${vOpen.filter(t=>t.tag===g).map(t=>rowOf(t,null)).join("")}`;
+        }).join("")
+      : `<div class="section-label"><span>Open · ${vOpen.length}</span><span>tick to complete</span></div>
+         ${vOpen.map(t=>rowOf(t,null)).join("")}`);
+
+  const filteredWeeklyBlock = vWeekly.length ? `
+    <div class="section-label" style="margin-top:22px"><span>${resting?"Optional today":"Flexible this week"} · ${vWeekly.length}</span><span>${resting?"rest day — nothing counts as missed":"counts toward a weekly target"}</span></div>
+    ${vWeekly.map(t=>{
+      if(resting) return rowOf(t, null, "Optional · rest day");
+      const q = weekQuota(t, mon), c = weekCount(t, mon, date);
+      return rowOf(t, null, c>=q ? `${c}/${q} this week · target met ✓` : `${c}/${q} this week`);
+    }).join("")}` : "";
+
+  const filteredDoneBlock = vDone.length ? `
+    <div class="section-label" style="margin-top:22px"><span>Done today · ${vDone.length}</span></div>
+    ${vDone.map(t=>rowOf(t, statusOf(date,t.id))).join("")}` : "";
+
+  paint(`
+  <div class="cols a">
+    <div class="stack">
+      ${resting ? `<div class="card rest-card"><div class="rest-row"><span class="em">🏖️</span>
+        <div class="tx"><div style="font-size:14.5px;font-weight:600">Rest mode is on</div>
+        <div class="sub">${rest && rest.to ? `Until ${prettyDate(rest.to)}` : "Until you end it"}. Streaks are paused and nothing counts as missed.</div></div>
+        <button class="btn ghost tiny" id="endRestT">End rest</button></div></div>` : ""}
+      <div class="card">
+        <div class="ring-wrap">
+          <div class="ring">
+            <svg viewBox="0 0 142 142">
+              <circle class="track" cx="71" cy="71" r="${R}"/>
+              <circle class="bar" id="ringBar" cx="71" cy="71" r="${R}" stroke-dasharray="${C.toFixed(2)}" stroke-dashoffset="${(C - C*from/100).toFixed(2)}"/>
+            </svg>
+            <div class="mid">${resting && !exp.length ? `<b style="font-size:27px;letter-spacing:-.8px">Rest</b><small>day off</small>` : `<b>${pct}<span style="font-size:17px">%</span></b><small>${nDone+nMini} of ${exp.length}</small>`}</div>
+          </div>
+          <div class="facts">
+            <div class="fact"><i class="dot" style="background:var(--accent)"></i><b>${nDone}</b> done${nMini?` · <b style="min-width:0">${nMini}</b> mini`:""}</div>
+            <div class="fact"><i class="dot" style="background:var(--ink-3);opacity:.5"></i><b>${open.length}</b> still open</div>
+            ${fMin?`<div class="fact"><i class="dot" style="background:#6aa8f0"></i><b>${fmtMin(fMin)}</b> focused</div>`:""}
+            <div class="fact" style="font-size:12.5px;color:var(--ink-3);margin-top:2px">Anything left open at midnight is logged as missed.</div>
+          </div>
+        </div>
+      </div>
+      ${yc.total ? `
+      <div class="card" style="padding:16px 22px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div><div style="font-size:13.5px;font-weight:500">Yesterday</div>
+            <div class="sub">${yc.done+yc.mini} of ${yc.total} done${yc.mini?` (${yc.mini} mini)`:""}${yc.miss?` · ${yc.miss} missed`:""}</div></div>
+          <button class="btn ghost tiny" id="seeYest">View</button>
+        </div>
+      </div>` : ""}
+      ${state.settings.mood ? `
+      <div class="card">
+        <div class="card-head"><h2>How's the day going?</h2>${L.mood?`<span>${MOODS.find(m=>m[0]===L.mood)[1]} ${L.mood}</span>`:""}</div>
+        <div class="moods">${MOODS.map(([id,em])=>`<button class="mood" data-mood="${id}" aria-pressed="${L.mood===id}">${em}<small>${id}</small></button>`).join("")}</div>
+      </div>` : ""}
+      <div class="card">
+        <div class="card-head"><h2>How it works</h2></div>
+        <p class="sub">Tick the box when you finish. Hover a task for <b>½ Mini</b> (half credit, keeps the streak) or <b>Focus</b> (a timer that ticks it off). Click a task name to edit it.<br><br>1–5 switch screens · A quick-adds · / searches · F focuses the next task · N opens the full task editor · T changes theme.</p>
+      </div>
+    </div>
+    <div>
+      <div class="quickbar">
+        <div class="searchbox">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+          <input id="taskSearch" type="text" placeholder="Find a task…" value="${esc(state.taskQuery)}" aria-label="Search today's tasks">
+        </div>
+        <div class="qadd">
+          <input id="quickAdd" type="text" maxlength="60" placeholder="Quick add…">
+          <button class="btn tiny" id="quickAddBtn">Add</button>
+        </div>
+        <span class="qhint">/ search · A add</span>
+      </div>
+      ${tagFilters.length ? `<div class="filterbar" id="taskFilters">
+        <button class="chip sm" data-filter-tag="all" aria-pressed="${state.taskTag==="all"}">All</button>
+        ${tagFilters.map(t=>`<button class="chip sm" data-filter-tag="${esc(t.name)}" aria-pressed="${state.taskTag===t.name}"><i style="background:${t.color}"></i>${esc(t.name)}</button>`).join("")}
+      </div>` : ""}
+      ${filteredOpenBlock}${filteredWeeklyBlock}${filteredDoneBlock}
+    </div>
+  </div>`);
+
+  const bar = $("#ringBar");
+  if(bar) requestAnimationFrame(()=>requestAnimationFrame(()=>{ bar.style.strokeDashoffset = (C - C*pct/100).toFixed(2); }));
+  state.lastPct = pct;
+
+  const view = $("#view");
+  view.querySelectorAll("[data-check]").forEach(b=>b.addEventListener("click", e=>{
+    e.stopPropagation();
+    const task = findTask(b.dataset.check); if(!task) return;
+    markTask(date, task, logged(task) ? null : "done", b);
+  }));
+  view.querySelectorAll("[data-mini]").forEach(b=>b.addEventListener("click", e=>{
+    e.stopPropagation();
+    const task = findTask(b.dataset.mini); if(task) markTask(date, task, "mini", b);
+  }));
+  view.querySelectorAll("[data-focus]").forEach(b=>b.addEventListener("click", e=>{
+    e.stopPropagation();
+    const task = findTask(b.dataset.focus); if(task) openFocus(task);
+  }));
+  view.querySelectorAll(".row.live .title").forEach(el=>el.addEventListener("click", ()=>{
+    const task = findTask(el.closest(".row").dataset.row); if(task) taskDialog(task);
+  }));
+  view.querySelectorAll(".mood").forEach(b=>b.addEventListener("click",()=>{
+    L.mood = (L.mood===b.dataset.mood) ? null : b.dataset.mood;
+    queueSaveMonth(ymOf(date)); viewToday();
+  }));
+  const search = $("#taskSearch");
+  if(search){
+    search.addEventListener("input", e=>{ state.taskQuery = e.target.value; viewToday(); setTimeout(()=>{ const el=$("#taskSearch"); if(el){ el.focus(); el.setSelectionRange(el.value.length,el.value.length); } },0); });
+  }
+  const qa = $("#quickAdd"), qab = $("#quickAddBtn");
+  const doQuickAdd = async ()=>{
+    const raw = qa?.value.trim() || "";
+    if(!raw) return;
+    const tagMatch = raw.match(/(?:^|\\s)#([a-zA-Z0-9_-]{1,18})$/);
+    const typedTag = tagMatch ? tagMatch[1].toLowerCase() : "";
+    const title = raw.replace(/\\s#[a-zA-Z0-9_-]{1,18}$/,"").trim();
+    if(!title){ qa.focus(); return; }
+    let tag = typedTag && tagList().some(t=>t.name===typedTag) ? typedTag : tagList()[0]?.name || "general";
+    if(typedTag && !tagList().some(t=>t.name===typedTag)) toast(`Unknown tag #${typedTag} — used ${tag}`);
+    const task = { id:uid(), title, tag, repeat:"daily", created:today() };
+    state.tasks.push(task); await saveTasks(); qa.value=""; state.taskQuery=""; state.taskTag="all";
+    toast(`Added "${title}"`); viewToday();
+  };
+  if(qab) qab.onclick = doQuickAdd;
+  if(qa) qa.addEventListener("keydown", e=>{ if(e.key==="Enter") doQuickAdd(); });
+  if($("#taskFilters")) $("#taskFilters").onclick = e=>{
+    const b=e.target.closest("[data-filter-tag]"); if(!b) return;
+    state.taskTag=b.dataset.filterTag; viewToday();
+  };
+  if($("#endRestT")) $("#endRestT").onclick = ()=>{ endRest(); viewToday(); };
+  if($("#seeYest")) $("#seeYest").onclick = ()=>{ state.selDay = yest; state.cursor = parseKey(yest); go("month"); };
+  return pct;
+}
+
+function focusNext(){
+  if(state.tab!=="today"){ go("today"); return; }
+  const date = today();
+  const next = expected(date).find(t=>statusOf(date,t.id)!=="done" && statusOf(date,t.id)!=="mini")
+    || weeklyActive(date).find(t=>statusOf(date,t.id)!=="done" && statusOf(date,t.id)!=="mini");
+  if(next){ openFocus(next); }
+  else toast("Nothing open — today's list is clear 🌿");
+}
+
+async function markTask(date, task, s, btn){
+  const row = btn && btn.closest(".row");
+  const before = state.lastPct ?? 0;
+  if(row && !reduced){
+    const ck = row.querySelector(".check"); if(ck) ck.classList.add("pop");
+    row.classList.add(s ? "leaving" : "leaving-back");
+    await wait(s ? 250 : 210);
+  }
+  setMark(date, task, s);
+  state.justDone = s ? task.id : null;
+  const pct = state.tab==="today" ? await viewToday() : before;
+  state.justDone = null;
+  if(before < 100 && pct === 100){ burst(); toast("Perfect day 🌿 everything's checked off"); }
+  else if(s==="done") toast(`${task.title} — done ✓`);
+  else if(s==="mini") toast(`${task.title} — mini logged, streak safe`);
+}
+
+function rowHTML({id,title,tag,status,note,meta,live,task,focusMin}){
+  const cls = status==="done" ? "is-done" : status==="mini" ? "is-mini" : status==="miss" ? "is-miss" : "";
+  const st = status || "none";
+  const aria = status==="done" ? "true" : status==="mini" ? "mixed" : "false";
+  const box = live
+    ? `<button class="check" data-check="${id}" data-state="${st}" role="checkbox" aria-checked="${aria}" title="${status?"Undo":"Mark done"}">${CHECK}</button>`
+    : `<span class="check ro" data-state="${st}" role="img" aria-label="${status||"not logged"}">${CHECK}</span>`;
+  const line = (meta || (status==="done"?"Completed":status==="mini"?"Mini":status==="miss"?"Missed":"Not logged"))
+             + (focusMin ? ` · ⏱ ${fmtMin(focusMin)}` : "") + (note ? ` · ${note}` : "");
+  const tools = (live && !status && task) ? `<div class="tools">
+      ${task.mini ? `<button class="tbtn" data-mini="${id}" title="Log the mini version — half credit, keeps the streak">½ Mini</button>` : ""}
+      <button class="tbtn" data-focus="${id}" title="Start a focus timer">${TIMER}Focus</button>
+    </div>` : "";
+  const arrive = live && state.justDone===id ? "arrive" : "";
+  return `<div class="row ${cls} ${live?"live":""} ${arrive}" data-row="${id}">
+    ${box}<div class="title">${esc(title)}<span>${esc(line)}</span></div>${tools}${tagPill(tag)}
+  </div>`;
+}
+
+function taskDialog(existing){
+  const edit = !!existing, tags = tagList();
+  const onceEdit = edit && existing.repeat==="once";
+  let tag = edit ? existing.tag : tags[0].name;
+  let mode = !edit ? "daily" : onceEdit ? "once" : (existing.sched && existing.sched.type) || "daily";
+  let days = edit && existing.sched && existing.sched.type==="days" ? [...existing.sched.days] : [1,2,3,4,5];
+  let perWeek = edit && existing.sched && existing.sched.type==="weekly" ? existing.sched.n : 3;
+  const modes = [["daily","Every day"],["days","Pick days"],["weekly","Times a week"]].concat(edit ? [] : [["once","Just once"]]);
+
+  openDialog(`
+    <h3>${edit?"Edit task":"New task"}</h3>
+    <p class="sub">${edit?"History already logged keeps its old name and schedule.":"Recurring tasks come back on their days — whatever happened before."}</p>
+    <div class="fld-wrap">
+      <label class="fld" for="tt">What is it?</label>
+      <input type="text" id="tt" maxlength="60" placeholder="Read for 30 minutes" autocomplete="off" value="${edit?esc(existing.title):""}">
+    </div>
+    <div class="fld-wrap">
+      <label class="fld">Tag</label>
+      <div class="chips" id="tagChips">${tags.map(t=>`<button class="chip" data-tag="${esc(t.name)}" aria-pressed="${t.name===tag}"><i style="background:${t.color}"></i>${esc(t.name)}</button>`).join("")}</div>
+    </div>
+    ${onceEdit ? "" : `
+    <div class="fld-wrap">
+      <label class="fld">How often</label>
+      <div class="chips" id="modeC">${modes.map(([k,l])=>`<button class="chip" data-mode="${k}" aria-pressed="${mode===k}">${l}</button>`).join("")}</div>
+      <div id="modeDetail" style="margin-top:10px"></div>
+    </div>
+    <div class="fld-wrap" id="miniWrap">
+      <label class="fld" for="mv">Mini version <span style="color:var(--ink-3)">— optional · half credit, keeps the streak</span></label>
+      <input type="text" id="mv" maxlength="50" placeholder="e.g. read just 1 page" autocomplete="off" value="${edit?esc(existing.mini||""):""}">
+    </div>`}
+    <div class="row2">
+      <button class="btn wide" id="saveTask">${edit?"Save":"Add task"}</button>
+      <button class="btn ghost wide" id="cancelTask">Cancel</button>
+    </div>`);
+
+  const paintTag = () => $("#tagChips").querySelectorAll(".chip").forEach(c=>{
+    const on = c.dataset.tag===tag, col = tagColor(c.dataset.tag);
+    c.setAttribute("aria-pressed", on);
+    c.style.cssText = on ? `background:color-mix(in srgb,${col} 18%,transparent);color:var(--ink);border-color:${col}` : "";
+  });
+  paintTag();
+  $("#tagChips").addEventListener("click", ev=>{ const b = ev.target.closest(".chip"); if(b){ tag = b.dataset.tag; paintTag(); } });
+
+  const detail = () => {
+    const el = $("#modeDetail"); if(!el) return;
+    if(mode==="days"){
+      el.innerHTML = `<div class="chips" id="dayC">${dowOrder().map(d=>`<button class="chip sm" data-d="${d}" aria-pressed="${days.includes(d)}">${DOW_SHORT[d]}</button>`).join("")}</div>`;
+      $("#dayC").onclick = ev=>{
+        const b = ev.target.closest(".chip"); if(!b) return;
+        const d = +b.dataset.d;
+        days = days.includes(d) ? days.filter(x=>x!==d) : [...days, d];
+        b.setAttribute("aria-pressed", days.includes(d));
+      };
+    }else if(mode==="weekly"){
+      el.innerHTML = `<div class="chips" id="nC">${[1,2,3,4,5,6].map(n=>`<button class="chip sm" data-n="${n}" aria-pressed="${perWeek===n}">${n}×</button>`).join("")}</div>
+        <p class="sub" style="margin-top:8px">Shows up every day until you hit the target. Whatever's short at the end of the week counts as missed.</p>`;
+      $("#nC").onclick = ev=>{
+        const b = ev.target.closest(".chip"); if(!b) return;
+        perWeek = +b.dataset.n;
+        $("#nC").querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed", c===b));
+      };
+    }else if(mode==="once"){
+      el.innerHTML = `<input type="date" id="dt" value="${today()}">`;
+    }else el.innerHTML = "";
+    if($("#miniWrap")) $("#miniWrap").hidden = mode==="once";
+  };
+  if($("#modeC")){
+    detail();
+    $("#modeC").onclick = ev=>{
+      const b = ev.target.closest(".chip"); if(!b) return;
+      mode = b.dataset.mode;
+      $("#modeC").querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed", c===b));
+      detail();
+    };
+  }
+  setTimeout(()=>$("#tt") && $("#tt").focus(), 140);
+
+  const save = async ()=>{
+    const title = $("#tt").value.trim();
+    if(!title){ $("#tt").focus(); toast("Give the task a name first"); return; }
+    if(mode==="days" && !days.length){ toast("Pick at least one day"); return; }
+    const mini = $("#mv") ? $("#mv").value.trim() : "";
+    const sched = mode==="days" ? { type:"days", days:[...days].sort() } : mode==="weekly" ? { type:"weekly", n:perWeek } : undefined;
+    if(edit){
+      existing.title = title; existing.tag = tag;
+      if(!onceEdit){ existing.sched = sched; existing.mini = mini || undefined; }
+    }else{
+      const t = { id:uid(), title, tag, created:today() };
+      if(mode==="once"){ t.repeat = "once"; t.date = ($("#dt") && $("#dt").value) || today(); }
+      else{ t.repeat = "daily"; if(sched) t.sched = sched; if(mini) t.mini = mini; }
+      state.tasks.push(t);
+    }
+    await saveTasks();
+    closeDialog(); toast(edit ? "Task updated" : "Task added");
+    go(state.tab==="library" ? "library" : "today");
+  };
+  $("#tt").addEventListener("keydown", e=>{ if(e.key==="Enter") save(); });
+  $("#saveTask").onclick = save;
+  $("#cancelTask").onclick = closeDialog;
+}
+const newTaskDialog = () => taskDialog(null);
+
+/* ============================ Month ============================ */
+async function viewMonth(){
+  const cur = state.cursor;
+  const ym = `${cur.getFullYear()}-${pad(cur.getMonth()+1)}`;
+  await ensureMonth(ym);
+  $("#h-title").textContent = "Month";
+  $("#h-sub").textContent = "Click a day to read its log";
+  const first = new Date(cur.getFullYear(), cur.getMonth(), 1);
+  const nDays = new Date(cur.getFullYear(), cur.getMonth()+1, 0).getDate();
+  const t0 = today();
+  let cells = "", mDone = 0, mMiss = 0, perfect = 0;
+  for(let i=0;i<(first.getDay()-WEEK_START+7)%7;i++) cells += `<div class="day blank"></div>`;
+  for(let d=1; d<=nDays; d++){
+    const ds = `${ym}-${pad(d)}`, c = dayStat(ds);
+    mDone += c.done + c.mini; mMiss += c.miss;
+    if(c.total && ds<t0 && c.miss===0 && c.open===0) perfect++;
+    const ratio = c.total ? c.score/c.total : 0;
+    const lvl = ratio===0 ? 0 : ratio<.34 ? 1 : ratio<.67 ? 2 : ratio<1 ? 3 : 4;
+    const alpha = [0,.24,.45,.68,1][lvl];
+    const bg = lvl ? `background:color-mix(in srgb, var(--accent) ${alpha*100}%, transparent);` : "";
+    const cls = ["day", lvl?"has":"", ds===t0?"today":"", ds>t0?"future":"", ds===state.selDay?"sel":"", (ds<=t0 && isRest(ds))?"rest":""].filter(Boolean).join(" ");
+    const tag = (c.done+c.mini) ? `<em>${c.done+c.mini} done</em>` : (c.miss ? `<em>${c.miss} missed</em>` : ((ds<=t0 && isRest(ds)) ? `<em>rest</em>` : ""));
+    cells += `<div class="${cls}" style="${bg}--k:${d}" data-day="${ds}">${d}${tag}</div>`;
+  }
+  paint(`
+  <div class="cols b">
+    <div class="card">
+      <div class="card-head">
+        <div class="month-nav">
+          <button class="icon-btn" id="pm" title="Previous month"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+          <b>${MONTHS[cur.getMonth()]} ${cur.getFullYear()}</b>
+          <button class="icon-btn" id="nm" title="Next month"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+        </div>
+        <span>${mDone} completed · ${mMiss} missed · ${perfect} perfect day${perfect===1?"":"s"}</span>
+      </div>
+      <div class="dow">${dowOrder().map(i=>`<span>${DAYS[i].slice(0,3)}</span>`).join("")}</div>
+      <div class="grid" id="grid">${cells}</div>
+      <div class="legend"><span>quiet</span>
+        ${[.24,.45,.68,1].map(a=>`<i style="background:color-mix(in srgb,var(--accent) ${a*100}%,transparent)"></i>`).join("")}
+        <span>full</span>
+      </div>
+    </div>
+    <div class="card">${dayPanelHTML(state.selDay || t0)}</div>
+  </div>`);
+  $("#pm").onclick = ()=>{ state.cursor = new Date(cur.getFullYear(), cur.getMonth()-1, 1); state.enter = true; viewMonth(); };
+  $("#nm").onclick = ()=>{
+    const nx = new Date(cur.getFullYear(), cur.getMonth()+1, 1);
+    if(nx <= nowD()){ state.cursor = nx; state.enter = true; viewMonth(); } else toast("That month hasn't happened yet");
+  };
+  $("#grid").addEventListener("click", e=>{
+    const d = e.target.closest(".day");
+    if(d && d.dataset.day){ state.selDay = d.dataset.day; viewMonth(); }
+  });
+}
+
+function dayPanelHTML(date){
+  const L = state.logs[date] || { mood:null, e:{} };
+  const seen = new Set(), rows = [];
+  if(date >= today()) expected(date).forEach(t=>{
+    seen.add(t.id);
+    rows.push({ id:t.id, title:t.title, tag:t.tag, status:statusOf(date,t.id), note:(L.e[t.id]||{}).n, focusMin:(L.e[t.id]||{}).f||0 });
+  });
+  for(const id in (L.e||{})){
+    if(seen.has(id)) continue;
+    const e = L.e[id], s = statusOf(date, id); if(!s) continue;
+    rows.push({ id, title:e.t||"Removed task", tag:e.g||"—", status:s, note:e.n, focusMin:e.f||0,
+      meta: e.w ? "Missed · weekly target short" : null });
+  }
+  const done = rows.filter(r=>r.status==="done"||r.status==="mini").length;
+  const mood = L.mood ? MOODS.find(m=>m[0]===L.mood) : null;
+  return `
+    <div class="card-head"><h2>${prettyDate(date)}</h2><span>read-only</span></div>
+    <p class="sub" style="margin-bottom:16px">${rows.length ? `${done} of ${rows.length} completed` : "Nothing tracked"}${mood?` · felt ${mood[0]} ${mood[1]}`:""}${focusMinutes(date)?` · ⏱ ${fmtMin(focusMinutes(date))}`:""}</p>
+    ${rows.length ? rows.map(r=>rowHTML({...r, live:false})).join("")
+      : `<div class="empty"><p>Quiet day</p><small>No tasks were scheduled or logged.</small></div>`}`;
+}
+
+/* ============================ Library ============================ */
+function viewLibrary(){
+  $("#h-title").textContent = "Library";
+  $("#h-sub").textContent = "Your recurring habits and upcoming one-offs";
+  const recurring = state.tasks.filter(t=>t.repeat!=="once" && !t.removed);
+  const once = state.tasks.filter(t=>t.repeat==="once" && !t.removed && t.date>=today());
+  const gone = state.tasks.filter(t=>t.removed);
+  const row = (t, idx, len, reorder) => `
+    <div class="row" data-row="${t.id}">
+      <div class="title">${esc(t.title)}<span>${esc(schedText(t))}${t.mini?` · mini: ${esc(t.mini)}`:""}${t.repeat!=="once"?` · since ${prettyDate(t.created)}`:""}</span></div>
+      <div class="tools">
+        ${reorder ? `
+        <button class="icon-btn sm" data-up="${t.id}" title="Move up" ${idx===0?"disabled":""}><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+        <button class="icon-btn sm" data-down="${t.id}" title="Move down" ${idx===len-1?"disabled":""}><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></svg></button>` : ""}
+        <button class="icon-btn sm" data-edit="${t.id}" title="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+        <button class="icon-btn sm" data-del="${t.id}" title="Remove"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg></button>
+      </div>
+      ${tagPill(t.tag)}
+    </div>`;
+  paint(`
+  <div class="cols c">
+    <div class="card">
+      <div class="card-head"><h2>Recurring</h2><span>${recurring.length} habit${recurring.length===1?"":"s"} · hover for tools</span></div>
+      ${recurring.length ? recurring.map((t,i)=>row(t,i,recurring.length,true)).join("") : `<div class="empty"><p>No habits yet</p><small>Add one to get started.</small></div>`}
+    </div>
+    <div class="stack">
+      <div class="card">
+        <div class="card-head"><h2>Coming up once</h2><span>${once.length}</span></div>
+        ${once.length ? once.map((t,i)=>row(t,i,once.length,false)).join("") : `<p class="sub">Nothing scheduled as a one-off.</p>`}
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Retired</h2><span>${gone.length}</span></div>
+        <p class="sub">${gone.length ? esc(gone.map(t=>t.title).join(", ")) + " — no longer scheduled. Their history stays in Month and Stats."
+          : "Removed tasks land here. Nothing you've logged is ever deleted with them."}</p>
+      </div>
+    </div>
+  </div>`);
+  const move = async (id, dir) => {
+    const order = state.tasks.filter(t=>t.repeat!=="once" && !t.removed);
+    const pos = order.findIndex(t=>t.id===id), other = order[pos+dir]; if(!other) return;
+    const i = state.tasks.indexOf(order[pos]), j = state.tasks.indexOf(other);
+    [state.tasks[i], state.tasks[j]] = [state.tasks[j], state.tasks[i]];
+    await saveTasks(); viewLibrary();
+  };
+  const v = $("#view");
+  v.querySelectorAll("[data-up]").forEach(b=>b.onclick = ()=>move(b.dataset.up,-1));
+  v.querySelectorAll("[data-down]").forEach(b=>b.onclick = ()=>move(b.dataset.down,1));
+  v.querySelectorAll("[data-edit]").forEach(b=>b.onclick = ()=>{ const t = findTask(b.dataset.edit); if(t) taskDialog(t); });
+  v.querySelectorAll("[data-del]").forEach(b=>b.onclick = ()=>{
+    const t = findTask(b.dataset.del); if(!t) return;
+    openDialog(`
+      <h3>Remove ${esc(t.title)}?</h3>
+      <p class="sub">It stops showing up from tomorrow. Everything you already logged stays exactly where it is.</p>
+      <div class="row2"><button class="btn danger wide" id="yes">Remove</button><button class="btn ghost wide" id="no">Keep it</button></div>`);
+    $("#yes").onclick = async ()=>{ t.removed = true; t.removedAt = today(); await saveTasks(); closeDialog(); toast("Removed — history kept"); viewLibrary(); };
+    $("#no").onclick = closeDialog;
+  });
+}
+
+/* ============================ Stats maths ============================ */
+function rangeKeys(n){ const now = nowD(), out = []; for(let i=n-1;i>=0;i--) out.push(keyOf(shift(now,-i))); return out; }
+function rollup(keys){
+  let done=0, mini=0, miss=0, days=0, perfect=0;
+  keys.forEach(ds=>{
+    const c = dayStat(ds); if(!c.total) return;
+    days++; done+=c.done; mini+=c.mini; miss+=c.miss;
+    if(c.miss===0 && c.open===0) perfect++;
+  });
+  const settled = done+mini+miss;
+  return { done, mini, miss, days, perfect, rate: settled ? Math.round((done + mini*.5)/settled*100) : null };
+}
+function earliestCreated(){ return state.tasks.reduce((m,t)=>(!m || t.created<m) ? t.created : m, null); }
+/* day-based streak: consecutive recorded completions (done or mini). Days with no record are skipped. */
+function taskStreak(task){
+  if(isWeekly(task)) return weekStreaks(task).cur;
+  const now = nowD(); let streak = 0;
+  for(let i=0;i<400;i++){
+    const ds = keyOf(shift(now,-i));
+    if(ds < task.created || !state.loaded.has(ymOf(ds))) break;
+    const s = statusOf(ds, task.id);
+    if(s==="done" || s==="mini"){ streak++; continue; }
+    if(!s || i===0) continue;
+    break;
+  }
+  return streak;
+}
+function taskBest(task){
+  if(isWeekly(task)) return weekStreaks(task).best;
+  const now = nowD(); let best = 0, run = 0;
+  for(let i=399;i>=0;i--){
+    const ds = keyOf(shift(now,-i));
+    if(ds < task.created || !state.loaded.has(ymOf(ds))) continue;
+    const s = statusOf(ds, task.id);
+    if(s==="done" || s==="mini"){ run++; best = Math.max(best, run); }
+    else if(s==="miss") run = 0;
+  }
+  return best;
+}
+/* weekly habits: streak counted in weeks where the target was met */
+function weekStreaks(t){
+  const mon0 = weekStart(today()), weeks = [];
+  for(let w=0; w<60; w++){
+    const mon = keyOf(shift(parseKey(mon0), -7*w)), sun = keyOf(shift(parseKey(mon), 6));
+    if(sun < t.created || !state.loaded.has(ymOf(sun))) break;
+    const q = weekQuota(t, mon); if(!q){ weeks.push(null); continue; }
+    if(w===0){ weeks.push(weekCount(t, mon, today()) >= q ? true : null); continue; }
+    let short = false;
+    for(let i=0;i<7 && !short;i++){
+      const L = state.logs[keyOf(shift(parseKey(mon), i))];
+      short = !!(L && L.e && Object.keys(L.e).some(k=>k.startsWith(t.id+"~w")));
+    }
+    weeks.push(!short);
+  }
+  let cur = 0, best = 0, run = 0;
+  for(const m of weeks){ if(m===null) continue; if(m) cur++; else break; }
+  for(const m of weeks.slice().reverse()){ if(m===true){ run++; best = Math.max(best, run); } else if(m===false) run = 0; }
+  return { cur, best };
+}
+function perfectStreak(){
+  const now = nowD(), first = earliestCreated(); let streak = 0;
+  for(let i=0;i<400;i++){
+    const ds = keyOf(shift(now,-i));
+    if((first && ds < first) || !state.loaded.has(ymOf(ds))) break;
+    const c = dayStat(ds);
+    if(!c.total) continue;
+    if(c.miss===0 && c.open===0){ streak++; continue; }
+    if(i===0) continue;
+    break;
+  }
+  return streak;
+}
+function moodInsights(keys, rows){
+  const moodDays = keys.filter(ds=>state.logs[ds] && state.logs[ds].mood);
+  const levels = MOODS.map(([id,em])=>{
+    let sc = 0, n = 0;
+    moodDays.filter(d=>state.logs[d].mood===id).forEach(d=>{
+      const c = dayStat(d), set = c.done+c.mini+c.miss;
+      if(set){ sc += (c.done + c.mini*.5)/set; n++; }
+    });
+    return { id, em, n, rate: n ? Math.round(sc/n*100) : null };
+  });
+  const avg = a => a.reduce((x,y)=>x+y,0)/a.length;
+  const links = rows.map(r=>{
+    const withIt = [], without = [];
+    moodDays.forEach(d=>{
+      const st = taskStatuses(d, r.t.id); if(!st.length) return;
+      const mv = MOOD_VAL[state.logs[d].mood];
+      if(st.some(s=>s==="done"||s==="mini")) withIt.push(mv); else without.push(mv);
+    });
+    if(withIt.length < 3 || without.length < 3) return null;
+    const a = avg(withIt), b = avg(without);
+    return { t:r.t, a, b, diff:a-b };
+  }).filter(Boolean).sort((x,y)=>Math.abs(y.diff)-Math.abs(x.diff)).slice(0,5);
+  return { levels, links, count:moodDays.length };
+}
+
+/* 7-day rolling completion rate as an animated line + area */
+function trendSVG(series, keys, avg){
+  const W=720, H=210, L=34, Rg=10, T=14, B=24, iw=W-L-Rg, ih=H-T-B;
+  const xAt = i => L + (series.length<2 ? iw/2 : (i/(series.length-1))*iw);
+  const yAt = v => T + (1 - v/100)*ih;
+  const pts = [];
+  series.forEach((v,i)=>{ if(v!==null) pts.push([xAt(i), yAt(v), i, v]); });
+  if(pts.length < 2) return `<p class="sub">Not enough closed days yet to draw a trend — this fills in as days finish.</p>`;
+  const line = pts.map((p,i)=>`${i?"L":"M"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
+  const base = (T+ih).toFixed(1);
+  const area = `${line} L${pts[pts.length-1][0].toFixed(1)},${base} L${pts[0][0].toFixed(1)},${base} Z`;
+  const grid = [0,25,50,75,100].map(v=>`<line class="gl" x1="${L}" x2="${W-Rg}" y1="${yAt(v).toFixed(1)}" y2="${yAt(v).toFixed(1)}"/>
+     <text class="tx" x="${L-7}" y="${(yAt(v)+3.5).toFixed(1)}" text-anchor="end">${v}</text>`).join("");
+  const avgLine = avg===null ? "" : `<line class="avg" x1="${L}" x2="${W-Rg}" y1="${yAt(avg).toFixed(1)}" y2="${yAt(avg).toFixed(1)}"/>
+     <text class="tx" x="${W-Rg}" y="${(yAt(avg)-6).toFixed(1)}" text-anchor="end">${avg}% average</text>`;
+  const hot = pts.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="9" fill="transparent"><title>${prettyDate(keys[p[2]])} — ${p[3]}%</title></circle>`).join("");
+  const last = pts[pts.length-1];
+  return `<svg class="trend" viewBox="0 0 ${W} ${H}" role="img" aria-label="Seven-day rolling completion rate">
+    <defs><linearGradient id="tg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="var(--accent)" stop-opacity=".34"/><stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
+    </linearGradient></defs>
+    ${grid}
+    <path class="ar" d="${area}" fill="url(#tg)"/>
+    <path class="ln" d="${line}" pathLength="1"/>
+    ${avgLine}
+    <circle class="pulse" cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="4.5"/>
+    <circle class="pt" cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="4.5"/>
+    ${hot}
+    <text class="tx" x="${L}" y="${H-6}">${prettyDate(keys[pts[0][2]])}</text>
+    <text class="tx" x="${W-Rg}" y="${H-6}" text-anchor="end">today</text>
+  </svg>`;
+}
+
+/* ============================ Stats view ============================ */
+async function viewStats(){
+  const now = nowD();
+  const monthsBack = Math.min(9, Math.ceil((state.range*2)/30) + 2);
+  for(let i=0;i<monthsBack;i++){ const d = new Date(now.getFullYear(), now.getMonth()-i, 1); await ensureMonth(`${d.getFullYear()}-${pad(d.getMonth()+1)}`); }
+  const N = state.range;
+  $("#h-title").textContent = "Stats";
+  $("#h-sub").textContent = `Last ${N} days`;
+  const keys = rangeKeys(N), cur = rollup(keys);
+  const prevKeys = []; for(let i=N*2-1;i>=N;i--) prevKeys.push(keyOf(shift(now,-i)));
+  const prev = rollup(prevKeys);
+  if(!cur.days){
+    paint(`<div class="card empty"><p>No history in this window yet</p><small>Tick a few boxes on Today — the numbers fill in as days close.</small></div>`);
+    return;
+  }
+
+  const active = state.tasks.filter(t=>!t.removed && t.repeat!=="once");
+  const rows = active.map(t=>{
+    let d=0, mi=0, m=0, f=0;
+    keys.forEach(ds=>{ taskStatuses(ds,t.id).forEach(s=>{ if(s==="done") d++; else if(s==="mini") mi++; else m++; }); f += focusMinutes(ds, t.id); });
+    const set = d+mi+m;
+    return { t, d, mi, m, f, rate: set ? Math.round((d + mi*.5)/set*100) : null,
+             streak: taskStreak(t), best: taskBest(t), unit: isWeekly(t) ? "w" : "d" };
+  }).sort((a,b)=>(b.rate??-1)-(a.rate??-1));
+
+  const rated = rows.filter(r=>r.rate!==null);
+  const consistency = rated.length ? Math.round(rated.reduce((a,r)=>a+r.rate,0)/rated.length) : null;
+  const kept = rated.filter(r=>r.rate>=70).length;
+  const last7 = rollup(keys.slice(-7));
+  const momentum = (last7.rate!==null && cur.rate!==null) ? last7.rate - cur.rate : null;
+  const delta = (cur.rate!==null && prev.rate!==null) ? cur.rate - prev.rate : null;
+  const focusTotal = keys.reduce((a,ds)=>a+focusMinutes(ds),0);
+
+  const stats = keys.map(ds=>dayStat(ds));
+  const series = stats.map((_,idx)=>{
+    let sc=0, set=0;
+    for(let k=Math.max(0,idx-6); k<=idx; k++){ const c = stats[k]; sc += c.done + c.mini*.5; set += c.done+c.mini+c.miss; }
+    return set ? Math.round(sc/set*100) : null;
+  });
+
+  const chartKeys = keys.slice(-Math.min(N,30));
+  const peak = Math.max(1, ...chartKeys.map(ds=>{ const c = dayStat(ds); return c.done+c.mini+c.miss; }));
+  const chart = chartKeys.map((ds,j)=>{
+    const c = dayStat(ds);
+    if(!c.total) return `<div class="col" style="--j:${j}"><i class="z"></i><span class="tip">${prettyDate(ds)} · nothing recorded</span></div>`;
+    const h = v => Math.round(v/peak*100);
+    return `<div class="col" style="--j:${j}">
+      <span class="tip">${prettyDate(ds)} · ${c.done} done${c.mini?` · ${c.mini} mini`:""}${c.miss?` · ${c.miss} missed`:""}${c.open?` · ${c.open} open`:""}</span>
+      ${c.miss?`<i class="m" style="height:${h(c.miss)}%"></i>`:""}
+      ${c.mini?`<i class="h" style="height:${h(c.mini)}%"></i>`:""}
+      ${c.done?`<i class="d" style="height:${h(c.done)}%"></i>`:(c.mini||c.miss?"":`<i class="z"></i>`)}
+    </div>`;
+  }).join("");
+
+  const wk = Array.from({length:7},()=>({sc:0,set:0}));
+  stats.forEach((c,i)=>{ const w = parseKey(keys[i]).getDay(); wk[w].sc += c.done + c.mini*.5; wk[w].set += c.done+c.mini+c.miss; });
+  const wkHTML = dowOrder().map(i=>{
+    const w = wk[i], p = w.set ? Math.round(w.sc/w.set*100) : 0;
+    return `<div><span class="bar"><i style="height:${w.set?Math.max(4,p):0}%"></i></span><span class="pc">${w.set?p+"%":"—"}</span><span class="lb">${DOW_SHORT[i]}</span></div>`;
+  }).join("");
+
+  const tags = {};
+  keys.forEach(ds=>{
+    const L = state.logs[ds]; if(!L || !L.e) return;
+    for(const k in L.e){
+      const s = statusOf(ds, k); if(!s) continue;
+      const g = L.e[k].g || "—";
+      tags[g] = tags[g] || { done:0, mini:0, miss:0 };
+      tags[g][s]++;
+    }
+  });
+  const tagRows = Object.entries(tags).sort((a,b)=>(b[1].done+b[1].mini+b[1].miss)-(a[1].done+a[1].mini+a[1].miss));
+  const tagPeak = Math.max(1, ...tagRows.map(([,v])=>v.done+v.mini+v.miss));
+
+  const gridDays = keys.slice(-Math.min(N,35));
+  const habitGrid = rows.map(r=>`
+    <div class="hrow">
+      <span class="hn" title="${esc(r.t.title)}">${esc(r.t.title)}</span>
+      <span class="cells" style="grid-template-columns:repeat(${gridDays.length},1fr)">
+        ${gridDays.map(ds=>{
+          const st = taskStatuses(ds, r.t.id);
+          const k = st.includes("done") ? "d" : st.includes("mini") ? "h" : st.includes("miss") ? "m" : "";
+          const lbl = {d:"done",h:"mini",m:"missed"}[k] || "no record";
+          return `<i class="${k}" title="${prettyDate(ds)} — ${lbl}"></i>`;
+        }).join("")}
+      </span>
+      <span class="hr">${r.rate===null?"—":r.rate+"%"}</span>
+    </div>`).join("");
+
+  const mi = moodInsights(keys, rows);
+  const moodBars = mi.levels.map(l=>`<div><span class="bar"><i style="height:${l.rate===null?0:Math.max(4,l.rate)}%"></i></span>
+      <span class="pc">${l.rate===null?"—":l.rate+"%"}</span><span class="em" title="${l.id} · ${l.n} day${l.n===1?"":"s"}">${l.em}</span></div>`).join("");
+  const moodLinks = mi.links.length ? mi.links.map(k=>`
+    <div class="lk">
+      <span class="ar ${k.diff>=0?"up":"down"}">${k.diff>=0?"↑":"↓"}</span>
+      <span class="tx">${esc(k.t.title)}<small>mood ${k.a.toFixed(1)} on days you did it · ${k.b.toFixed(1)} when you didn't</small></span>
+      <span class="df" style="color:${k.diff>=0?"var(--accent)":"var(--miss)"}">${k.diff>=0?"+":""}${k.diff.toFixed(1)}</span>
+    </div>`).join("")
+    : `<p class="sub">Needs at least 3 days with and 3 without a habit, each with a mood logged. Keep checking in — links appear on their own.</p>`;
+
+  const bigN = (v, suf="", pre="") => v===null ? "—" : `<span data-count="${v}" data-suffix="${suf}" data-prefix="${pre}">${pre}${v}${suf}</span>`;
+
+  paint(`
+  <div class="cols e">
+    <div class="card"><div class="metric">
+      <span class="cap">Consistency</span>
+      <span class="big">${bigN(consistency,"%")}</span>
+      <span class="delta flat">average across your ${rated.length} habit${rated.length===1?"":"s"}, each counted once</span>
+    </div></div>
+    <div class="card"><div class="metric">
+      <span class="cap">Momentum</span>
+      <span class="big" style="color:${momentum===null?"inherit":momentum>0?"var(--accent)":momentum<0?"var(--miss)":"inherit"}">${bigN(momentum,"",momentum>0?"+":"")}</span>
+      <span class="delta ${momentum===null?"flat":momentum>0?"up":momentum<0?"down":"flat"}">last 7 days vs the ${N}-day average</span>
+    </div></div>
+    <div class="card"><div class="metric">
+      <span class="cap">Habits held</span>
+      <span class="big">${bigN(kept)}<span style="font-size:20px;color:var(--ink-3)">/${rated.length}</span></span>
+      <span class="delta flat">at 70% or better in this window</span>
+    </div></div>
+    <div class="card"><div class="metric">
+      <span class="cap">Perfect-day streak</span>
+      <span class="big">${bigN(perfectStreak())}</span>
+      <span class="delta flat">${cur.perfect} perfect day${cur.perfect===1?"":"s"} in this window</span>
+    </div></div>
+  </div>
+
+  <div class="card mt">
+    <div class="card-head"><h2>Trend</h2><span>7-day rolling completion · overall ${cur.rate===null?"—":cur.rate+"%"}${delta===null?"":` (${delta>0?"+":""}${delta} vs previous ${N} days)`}</span></div>
+    ${trendSVG(series, keys, cur.rate)}
+  </div>
+
+  <div class="card mt">
+    <div class="card-head"><h2>Habit consistency</h2><span>each square is a day · last ${gridDays.length}</span></div>
+    ${rows.length ? habitGrid + `<div class="hkey">
+        <span><i style="background:var(--accent)"></i>done</span>
+        <span><i style="background:linear-gradient(135deg,var(--accent) 0 50%,color-mix(in srgb,var(--accent) 22%,transparent) 50% 100%)"></i>mini</span>
+        <span><i style="background:color-mix(in srgb,var(--miss) 40%,transparent)"></i>missed</span>
+        <span><i style="background:var(--shade)"></i>no record</span>
+      </div>` : `<p class="sub">No habits to chart yet.</p>`}
+  </div>
+
+  <div class="cols c mt">
+    <div class="card">
+      <div class="card-head"><h2>Your days by mood</h2><span>completion on days you felt…</span></div>
+      ${mi.count ? `<div class="wk" style="grid-template-columns:repeat(5,1fr)">${moodBars}</div>` : `<p class="sub">Log your mood on Today and this fills in.</p>`}
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>What moves your mood</h2><span>${mi.count} mood day${mi.count===1?"":"s"}</span></div>
+      <div class="links">${moodLinks}</div>
+    </div>
+  </div>
+
+  <div class="card mt">
+    <div class="card-head"><h2>Daily volume</h2><span>${cur.done} done${cur.mini?` · ${cur.mini} mini`:""} · ${cur.miss} missed${focusTotal?` · ⏱ ${fmtMin(focusTotal)} focused`:""}</span></div>
+    <div class="chart">${chart}</div>
+    <div class="axis"><span>${prettyDate(chartKeys[0])}</span><span>today</span></div>
+    <div class="keys">
+      <span><i class="dot" style="background:var(--accent)"></i>completed</span>
+      <span><i class="dot" style="background:color-mix(in srgb,var(--accent) 50%,transparent)"></i>mini</span>
+      <span><i class="dot" style="background:color-mix(in srgb,var(--miss) 55%,transparent)"></i>missed</span>
+    </div>
+  </div>
+
+  <div class="cols c mt">
+    <div class="card">
+      <div class="card-head"><h2>Best days of the week</h2><span>completion rate</span></div>
+      <div class="wk">${wkHTML}</div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>By tag</h2><span>bar length = how much you scheduled</span></div>
+      ${tagRows.length ? tagRows.map(([g,v])=>{
+        const tot = v.done+v.mini+v.miss, col = tagColor(g);
+        const rate = Math.round((v.done + v.mini*.5)/tot*100);
+        const pd = v.done/tot*100, pm = v.mini/tot*100;
+        return `<div class="tagrow">
+          <span class="name"><i style="background:${col}"></i>${esc(g)}</span>
+          <span class="lane"><span class="tagbar" style="width:${Math.max(8, Math.round(tot/tagPeak*100))}%">
+            <i style="width:${pd}%;background:${col}"></i>
+            <i style="width:${pm}%;background:color-mix(in srgb,${col} 50%,transparent)"></i>
+            <i style="width:${100-pd-pm}%;background:color-mix(in srgb,${col} 16%,transparent)"></i>
+          </span></span>
+          <span class="num">${rate}% · ${v.done+v.mini}/${tot}</span>
+        </div>`;
+      }).join("") : `<p class="sub">Nothing settled in this window yet.</p>`}
+    </div>
+  </div>
+
+  <div class="card mt">
+    <div class="card-head"><h2>Habit by habit</h2><span>last ${N} days</span></div>
+    ${rows.length ? `<table>
+      <thead><tr><th>Habit</th><th>Rate</th><th>Done</th><th>Missed</th><th>Streak</th><th>Best</th><th>Focus</th></tr></thead>
+      <tbody>${rows.map(r=>`
+        <tr>
+          <td class="name">${esc(r.t.title)} ${tagPill(r.t.tag)}<small>${esc(schedText(r.t))}</small></td>
+          <td><span class="mini-track"><i style="width:${r.rate??0}%"></i></span>${r.rate===null?"—":r.rate+"%"}</td>
+          <td>${r.d}${r.mi?`<small class="mi">+${r.mi} mini</small>`:""}</td><td>${r.m}</td>
+          <td class="${r.streak?"flame":""}">${r.streak}${r.unit}</td><td>${r.best}${r.unit}</td>
+          <td>${r.f?fmtMin(r.f):"—"}</td>
+        </tr>`).join("")}</tbody>
+    </table>` : `<p class="sub">No habits to measure yet.</p>`}
+  </div>`);
+}
+
+/* ============================ Export ============================ */
+async function exportMonths(){
+  const keys = await S.keys("dl:log:");
+  return [...new Set([...keys.map(k=>k.replace("dl:log:","")), ymOf(today())])].sort().reverse();
+}
+async function viewExport(){
+  $("#h-title").textContent = "Export";
+  $("#h-sub").textContent = "Take your log with you";
+  const months = await exportMonths();
+  const opts = months.map(m=>{ const [y,mm]=m.split("-"); return `<option value="${m}">${MONTHS[+mm-1]} ${y}</option>`; }).join("");
+  paint(`
+  <div class="cols c">
+    <div class="stack">
+      <div class="card">
+        <div class="card-head"><h2>Monthly share card</h2><span>1080 × 1350 · Instagram-ready</span></div>
+        <p class="sub" style="margin-bottom:14px">A glass-style image of any month — consistency, the full heatmap, and your most consistent habit.</p>
+        <button class="btn wide" id="shareBtn">${SHARE}Create share card</button>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Download a month</h2></div>
+        <div class="fld-wrap"><label class="fld" for="mSel">Month</label><select id="mSel">${opts}</select></div>
+        <button class="btn wide" id="dl">Download CSV</button>
+        <p class="sub" style="margin-top:12px">One row per logged task — date, task, tag, status, focus minutes and your note — with a summary at the end.</p>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="card">
+        <div class="card-head"><h2>Backup file</h2><span>everything, one file</span></div>
+        <p class="sub" style="margin-bottom:14px">A full snapshot — tasks, settings and every logged day — as JSON. Restoring replaces what's here.</p>
+        <div class="row2"><button class="btn wide" id="bk">Download backup</button><button class="btn ghost wide" id="rs">Restore…</button></div>
+        <input type="file" id="rsFile" accept="application/json,.json" hidden>
+      </div>
+      <div class="card"><div class="card-head"><h2>Storage</h2></div><p class="sub" id="storeInfo">Counting…</p></div>
+      <div class="card">
+        <div class="card-head"><h2>Clear past logs</h2></div>
+        <p class="sub" style="margin-bottom:16px">Erases every day you've ever logged, including today. Your task list stays. There's no undo, so export first.</p>
+        <button class="btn danger wide" id="wipe">Clear all logs</button>
+      </div>
+    </div>
+  </div>`);
+  for(const m of months) await ensureMonth(m);
+  let dayCount=0, entryCount=0;
+  for(const d in state.logs){ dayCount++; entryCount += Object.keys(state.logs[d].e||{}).length; }
+  $("#storeInfo").innerHTML = `${entryCount} entries across ${dayCount} logged days.<br>Saved to ${BACKEND_LABEL}.` +
+    (BACKEND==="memory" ? `<br><br>This preview can't write to disk. Open the .html file directly in your browser to keep data between sessions.` : "");
+  $("#shareBtn").onclick = ()=>shareDialog($("#mSel").value);
+  $("#dl").onclick = ()=>downloadMonth($("#mSel").value);
+  $("#wipe").onclick = wipeDialog;
+  $("#bk").onclick = downloadBackup;
+  $("#rs").onclick = ()=>$("#rsFile").click();
+  $("#rsFile").onchange = e=>{ const f = e.target.files[0]; if(f) restoreBackup(f); e.target.value = ""; };
+}
+function saveBlob(blob, name){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+function csvCell(v){ const s = String(v??""); return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; }
+async function downloadMonth(ym){
+  await ensureMonth(ym);
+  const dates = Object.keys(state.logs).filter(d=>d.startsWith(ym)).sort();
+  const rows = [["Date","Task","Tag","Status","Focus (min)","Note"]];
+  let done=0, mini=0, miss=0, focusT=0; const tally = {};
+  dates.forEach(d=>{
+    const L = state.logs[d];
+    Object.keys(L.e||{}).forEach(id=>{
+      const e = L.e[id];
+      const label = e.s==="done" ? "Completed" : e.s==="mini" ? "Mini" : e.s==="open" ? "Open" : (e.w ? "Missed (weekly target)" : "Missed");
+      rows.push([d, e.t||"", e.g||"", label, e.f||"", e.n||""]);
+      focusT += e.f || 0;
+      if(e.s==="done"){ done++; tally[e.g||"—"]=(tally[e.g||"—"]||0)+1; }
+      else if(e.s==="mini"){ mini++; tally[e.g||"—"]=(tally[e.g||"—"]||0)+1; }
+      else if(e.s!=="open") miss++;
+    });
+    if(L.mood) rows.push([d,"Mood check-in","mood",L.mood,"",""]);
+  });
+  const [y,m] = ym.split("-");
+  const top = Object.entries(tally).sort((a,b)=>b[1]-a[1])[0];
+  const set = done+mini+miss;
+  rows.push([], ["Summary", `${MONTHS[+m-1]} ${y}`], ["Days logged", dates.length], ["Completed", done], ["Mini", mini], ["Missed", miss],
+    ["Completion rate", set ? `${Math.round((done+mini*.5)/set*100)}%` : "—"], ["Focus minutes", focusT], ["Busiest tag", top ? `${top[0]} (${top[1]})` : "—"]);
+  saveBlob(new Blob([rows.map(r=>r.map(csvCell).join(",")).join("\n")], { type:"text/csv;charset=utf-8" }), `daily-log-${ym}.csv`);
+  toast(dates.length ? "CSV downloaded" : "Empty month exported");
+}
+async function downloadBackup(){
+  for(const k of await S.keys("dl:log:")) await ensureMonth(k.replace("dl:log:",""));
+  const data = { app:"daily-log", version:2, exported:new Date().toISOString(), settings:state.settings, tasks:state.tasks, logs:state.logs };
+  saveBlob(new Blob([JSON.stringify(data,null,2)], { type:"application/json" }), `daily-log-backup-${today()}.json`);
+  toast("Backup downloaded");
+}
+async function restoreBackup(file){
+  let data;
+  try{ data = JSON.parse(await file.text()); }catch(e){ toast("That file isn't readable JSON"); return; }
+  if(data.app !== "daily-log" || !Array.isArray(data.tasks)){ toast("Not a Daily Log backup"); return; }
+  const dayN = Object.keys(data.logs||{}).length;
+  openDialog(`
+    <h3>Restore this backup?</h3>
+    <p class="sub">${data.tasks.length} task${data.tasks.length===1?"":"s"} and ${dayN} logged day${dayN===1?"":"s"} from ${esc((data.exported||"").slice(0,10))}. Everything currently stored here is replaced.</p>
+    <div class="row2"><button class="btn wide" id="yes">Restore</button><button class="btn ghost wide" id="no">Cancel</button></div>`);
+  $("#no").onclick = closeDialog;
+  $("#yes").onclick = async ()=>{
+    for(const k of await S.keys("dl:log:")) await S.del(k);
+    state.tasks = data.tasks;
+    if(data.settings){ Object.assign(state.settings, data.settings); syncPrefs(); }
+    state.logs = data.logs || {}; state.loaded.clear();
+    const buckets = {};
+    for(const d in state.logs){ (buckets[ymOf(d)] = buckets[ymOf(d)] || {})[d] = state.logs[d]; }
+    for(const ym in buckets){ await S.set(K.log(ym), buckets[ym]); state.loaded.add(ym); }
+    await saveTasks(); await saveSettings();
+    closeDialog(); applyTheme(true); toast("Backup restored"); go("today");
+  };
+}
+function wipeDialog(){
+  openDialog(`
+    <h3>Clear every log?</h3>
+    <p class="sub">This removes all completions, misses, notes, focus time and moods — permanently. Type ERASE to confirm.</p>
+    <div class="fld-wrap"><input type="text" id="cf" placeholder="ERASE" autocomplete="off"></div>
+    <div class="row2"><button class="btn danger wide" id="doWipe" disabled>Clear all logs</button><button class="btn ghost wide" id="cancel">Keep history</button></div>`);
+  const btn = $("#doWipe");
+  setTimeout(()=>$("#cf") && $("#cf").focus(), 140);
+  $("#cf").addEventListener("input", e=>{ btn.disabled = e.target.value.trim().toUpperCase()!=="ERASE"; });
+  $("#cancel").onclick = closeDialog;
+  btn.onclick = async ()=>{
+    for(const k of await S.keys("dl:log:")) await S.del(k);
+    state.logs = {}; state.loaded.clear(); state.selDay = null;
+    closeDialog(); toast("All logs cleared"); go("export");
+  };
+}
+
+/* ============================ Share card ============================ */
+function monthSummary(ym){
+  const [y,m] = ym.split("-").map(Number);
+  const nDays = new Date(y,m,0).getDate(), t0 = today(), keys = [], cells = [];
+  for(let d=1; d<=nDays; d++){
+    const ds = `${ym}-${pad(d)}`;
+    if(ds > t0){ cells.push({ d, ds, ratio:null, future:true }); continue; }
+    keys.push(ds);
+    const c = dayStat(ds);
+    cells.push({ d, ds, ratio: c.total ? c.score/c.total : null, future:false });
+  }
+  const r = rollup(keys);
+  const hab = state.tasks.filter(t=>t.repeat!=="once").map(t=>{
+    let sc = 0, n = 0;
+    keys.forEach(ds=>taskStatuses(ds,t.id).forEach(s=>{ sc += VAL[s]; n++; }));
+    return { t, n, rate: n ? Math.round(sc/n*100) : null };
+  }).filter(h=>h.n>0);
+  const consistency = hab.length ? Math.round(hab.reduce((a,h)=>a+h.rate,0)/hab.length) : null;
+  const best = hab.filter(h=>h.n>=5).sort((a,b)=>b.rate-a.rate)[0] || hab.sort((a,b)=>b.rate-a.rate)[0] || null;
+  let run = 0, bestRun = 0;
+  keys.forEach(ds=>{
+    const c = dayStat(ds); if(!c.total) return;
+    if(c.miss===0 && c.open===0){ run++; bestRun = Math.max(bestRun, run); } else run = 0;
+  });
+  const focusT = keys.reduce((a,ds)=>a+focusMinutes(ds),0);
+  const moods = keys.map(ds=>state.logs[ds] && state.logs[ds].mood).filter(Boolean).map(x=>MOOD_VAL[x]);
+  const moodAvg = moods.length ? moods.reduce((a,b)=>a+b,0)/moods.length : null;
+  return { y, m, nDays, firstDow:(new Date(y,m-1,1).getDay()-WEEK_START+7)%7, cells, rate:r.rate, done:r.done+r.mini, miss:r.miss,
+           perfect:r.perfect, days:r.days, consistency, best, bestRun, focus:focusT, moodAvg,
+           moodEmoji: moodAvg ? MOODS[Math.min(4,Math.max(0,Math.round(moodAvg)-1))][1] : null };
+}
+function rr(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function glassPanel(ctx,x,y,w,h,r){
+  ctx.save();
+  rr(ctx,x,y,w,h,r); ctx.fillStyle = "rgba(255,255,255,.055)"; ctx.fill();
+  const g = ctx.createLinearGradient(0,y,0,y+h*.6); g.addColorStop(0,"rgba(255,255,255,.07)"); g.addColorStop(1,"rgba(255,255,255,0)");
+  rr(ctx,x,y,w,h,r); ctx.fillStyle = g; ctx.fill();
+  rr(ctx,x+1,y+1,w-2,h-2,r-1); ctx.strokeStyle = "rgba(255,255,255,.11)"; ctx.lineWidth = 2; ctx.stroke();
+  ctx.restore();
+}
+function glowBlob(ctx,x,y,r,hex,a){
+  const g = ctx.createRadialGradient(x,y,0,x,y,r);
+  g.addColorStop(0, hexA(hex,a)); g.addColorStop(1, hexA(hex,0));
+  ctx.fillStyle = g; ctx.fillRect(x-r,y-r,r*2,r*2);
+}
+function fitText(ctx, text, max){
+  if(ctx.measureText(text).width <= max) return text;
+  let t = text; while(t.length > 1 && ctx.measureText(t+"…").width > max) t = t.slice(0,-1);
+  return t + "…";
+}
+async function drawShareCard(ym){
+  await ensureMonth(ym);
+  const s = monthSummary(ym);
+  const cv = document.createElement("canvas"); cv.width = 1080; cv.height = 1350;
+  let ctx = null; try{ ctx = cv.getContext("2d"); }catch(e){}
+  if(!ctx) return null;
+  try{ await document.fonts.load("600 80px Outfit"); await document.fonts.ready; }catch(e){}
+  const acc = accentHex();
+  const F = (w,px) => `${w} ${px}px Outfit, "Segoe UI", Roboto, Arial, sans-serif`;
+  const INK = "#e8f2ec", INK2 = "rgba(232,242,236,.66)", INK3 = "rgba(232,242,236,.42)";
+
+  const bg = ctx.createLinearGradient(0,0,1080,1350); bg.addColorStop(0,"#0f1c17"); bg.addColorStop(1,"#070d0b");
+  ctx.fillStyle = bg; ctx.fillRect(0,0,1080,1350);
+  glowBlob(ctx,170,150,600,acc,.45); glowBlob(ctx,990,1200,640,acc,.20); glowBlob(ctx,980,330,420,"#4d8df6",.12);
+
+  ctx.textBaseline = "alphabetic";
+  ctx.fillStyle = INK3; ctx.font = F(600,24);
+  try{ ctx.letterSpacing = "6px"; }catch(e){}
+  ctx.fillText("DAILY LOG", 82, 110);
+  try{ ctx.letterSpacing = "0px"; }catch(e){}
+  ctx.fillStyle = INK; ctx.font = F(600,86);
+  const mName = MONTHS[s.m-1]; ctx.fillText(mName, 80, 200);
+  const mw = ctx.measureText(mName).width;
+  ctx.fillStyle = INK3; ctx.font = F(300,86); ctx.fillText(` ${s.y}`, 80+mw, 200);
+
+  glassPanel(ctx,80,250,920,310,44);
+  const big = s.consistency===null ? "—" : String(s.consistency);
+  ctx.fillStyle = acc; ctx.font = F(600,176); ctx.fillText(big, 124, 454);
+  const bw = ctx.measureText(big).width;
+  if(s.consistency!==null){ ctx.font = F(500,70); ctx.fillText("%", 130+bw, 454); }
+  ctx.fillStyle = INK2; ctx.font = F(500,30); ctx.fillText("consistency", 130, 510);
+  ctx.strokeStyle = "rgba(255,255,255,.10)"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(592,292); ctx.lineTo(592,518); ctx.stroke();
+  [[String(s.done),"tasks completed"],[String(s.perfect),"perfect days"],[s.focus?fmtMin(s.focus):"—","focused"]].forEach(([v,l],i)=>{
+    const yy = 340 + i*76;
+    ctx.fillStyle = INK; ctx.font = F(600,44); ctx.fillText(v, 634, yy);
+    const vw = ctx.measureText(v).width;
+    ctx.fillStyle = INK3; ctx.font = F(400,24); ctx.fillText(l, 648+vw, yy-2);
+  });
+
+  glassPanel(ctx,80,590,920,480,44);
+  ctx.fillStyle = INK2; ctx.font = F(600,28); ctx.fillText("Every day this month", 128, 648);
+  const weeks = Math.ceil((s.firstDow + s.nDays)/7);
+  const gx = 128, gy = 710, gw = 824, gap = 10, cw = (gw - 6*gap)/7, ch = (326 - (weeks-1)*gap)/weeks;
+  ctx.fillStyle = INK3; ctx.font = F(500,19); ctx.textAlign = "center";
+  dowOrder().forEach((di,i)=>ctx.fillText(DAYS[di].slice(0,3), gx + i*(cw+gap) + cw/2, 692));
+  ctx.textAlign = "left";
+  s.cells.forEach((c,i)=>{
+    const slot = i + s.firstDow, col = slot % 7, row = Math.floor(slot/7);
+    const x = gx + col*(cw+gap), y = gy + row*(ch+gap);
+    rr(ctx,x,y,cw,ch,12);
+    if(c.future){ ctx.fillStyle = "rgba(255,255,255,.025)"; ctx.fill(); }
+    else if(c.ratio===null || c.ratio===0){ ctx.fillStyle = "rgba(255,255,255,.06)"; ctx.fill(); }
+    else{
+      const lvl = c.ratio<.34 ? 1 : c.ratio<.67 ? 2 : c.ratio<1 ? 3 : 4;
+      ctx.fillStyle = hexA(acc, [0,.28,.5,.74,1][lvl]); ctx.fill();
+    }
+    if(c.ds===today()){ rr(ctx,x+1.5,y+1.5,cw-3,ch-3,11); ctx.strokeStyle = acc; ctx.lineWidth = 3; ctx.stroke(); }
+    const strong = c.ratio!==null && c.ratio>=.67;
+    ctx.fillStyle = strong ? "rgba(6,18,12,.85)" : (c.future ? "rgba(232,242,236,.2)" : INK3);
+    ctx.font = F(500,17); ctx.fillText(String(c.d), x+13, y+27);
+  });
+
+  glassPanel(ctx,80,1100,920,170,40);
+  ctx.fillStyle = INK3; ctx.font = F(600,20);
+  try{ ctx.letterSpacing = "3px"; }catch(e){}
+  ctx.fillText("MOST CONSISTENT", 128, 1152);
+  try{ ctx.letterSpacing = "0px"; }catch(e){}
+  if(s.best){
+    ctx.fillStyle = INK; ctx.font = F(600,40);
+    const name = fitText(ctx, s.best.t.title, 470);
+    ctx.fillText(name, 128, 1206);
+    ctx.fillStyle = acc; ctx.font = F(600,30); ctx.fillText(`${s.best.rate}%`, 128, 1244);
+    const rw = ctx.measureText(`${s.best.rate}%`).width;
+    ctx.fillStyle = INK3; ctx.font = F(400,22); ctx.fillText(`· ${s.best.t.tag}`, 128 + rw + 12, 1242);
+  }else{ ctx.fillStyle = INK2; ctx.font = F(500,32); ctx.fillText("Still building up", 128, 1214); }
+  ctx.textAlign = "right";
+  if(s.moodEmoji){
+    ctx.font = F(400,58); ctx.fillText(s.moodEmoji, 952, 1200);
+    ctx.fillStyle = INK3; ctx.font = F(400,20); ctx.fillText(`avg mood ${s.moodAvg.toFixed(1)}/5`, 952, 1246);
+  }else{
+    ctx.fillStyle = INK; ctx.font = F(600,44); ctx.fillText(`${s.bestRun}`, 952, 1210);
+    ctx.fillStyle = INK3; ctx.font = F(400,20); ctx.fillText("best perfect run", 952, 1242);
+  }
+  ctx.fillStyle = INK3; ctx.font = F(400,21);
+  ctx.fillText(`${s.days} day${s.days===1?"":"s"} tracked`, 1000, 1316);
+  ctx.textAlign = "left"; ctx.fillText("made with Daily Log", 80, 1316);
+  return cv;
+}
+async function shareDialog(ym){
+  const months = await exportMonths();
+  if(!months.includes(ym)) months.unshift(ym);
+  openDialog(`
+    <h3>Monthly share card</h3>
+    <p class="sub">A 1080 × 1350 image — the size Instagram likes for posts and stories.</p>
+    <div class="fld-wrap"><select id="scM">${months.map(m=>{ const [y,mm]=m.split("-"); return `<option value="${m}" ${m===ym?"selected":""}>${MONTHS[+mm-1]} ${y}</option>`; }).join("")}</select></div>
+    <div class="sc-prev" id="scPrev"><p class="sub">Drawing…</p></div>
+    <div class="row2"><button class="btn wide" id="scDl">${SHARE}Download PNG</button><button class="btn ghost wide" id="scCp">Copy image</button></div>`, true);
+  let canvas = null;
+  const draw = async ()=>{
+    $("#scPrev").innerHTML = `<p class="sub">Drawing…</p>`;
+    canvas = await drawShareCard($("#scM").value);
+    if(!canvas){ $("#scPrev").innerHTML = `<p class="sub">This browser can't draw images here.</p>`; return; }
+    $("#scPrev").innerHTML = `<img src="${canvas.toDataURL("image/png")}" alt="Share card preview">`;
+  };
+  $("#scM").onchange = draw;
+  $("#scDl").onclick = ()=>{ if(canvas) canvas.toBlob(b=>{ if(b){ saveBlob(b, `daily-log-${$("#scM").value}.png`); toast("Share card saved"); } }, "image/png"); };
+  $("#scCp").onclick = ()=>{
+    if(!canvas) return;
+    canvas.toBlob(async b=>{
+      try{ await navigator.clipboard.write([new ClipboardItem({ "image/png": b })]); toast("Copied — paste it anywhere"); }
+      catch(e){ toast("Copy isn't allowed here — use Download instead"); }
+    }, "image/png");
+  };
+  draw();
+}
+
+/* ============================ Focus timer ============================ */
+const FS = () => Object.assign({ preset:25, breakMin:5, sound:true, autoDone:true }, state.settings.focus || {});
+const focus = { task:null, total:25*60, remaining:25*60, endAt:0, running:false, mode:"work", preset:25, autoDone:true, iv:null };
+const FC = 2*Math.PI*128;
+const fmtClock = s => `${pad(Math.floor(Math.max(0,s)/60))}:${pad(Math.max(0,s)%60)}`;
+const focusOpen = () => $("#focus").classList.contains("on");
+const sessionLive = () => !!focus.task && (focus.running || ((focus.mode==="work"||focus.mode==="break") && focus.remaining < focus.total));
+function openFocus(task){
+  if(sessionLive() && focus.task.id !== task.id){ toast("A session is already running"); showFocus(); return; }
+  if(!focus.task || focus.task.id !== task.id || focus.mode==="doneWork" || focus.mode==="doneBreak"){
+    focus.task = task; focus.mode = "work"; focus.total = focus.preset*60; focus.remaining = focus.total; focus.running = false;
+  }
+  showFocus();
+}
+function showFocus(){ if(!focus.task) return; renderFocus(); $("#focus").classList.add("on"); $("#focus").setAttribute("aria-hidden","false"); updatePill(); }
+function hideFocus(){ $("#focus").classList.remove("on"); $("#focus").setAttribute("aria-hidden","true"); updatePill(); }
+function updatePill(){
+  const p = $("#focusPill");
+  if(focus.task && sessionLive() && !focusOpen()){
+    p.hidden = false;
+    p.innerHTML = `<span class="pdot ${focus.running?"live":""}"></span><b>${fmtClock(focus.remaining)}</b><span>${esc(focus.mode==="break"?"Break":focus.task.title)}</span>`;
+  }else p.hidden = true;
+  document.title = focus.running ? `${fmtClock(focus.remaining)} · ${focus.mode==="break"?"Break":focus.task.title}` : "Daily Log";
+}
+$("#focusPill").addEventListener("click", showFocus);
+function renderFocus(){
+  const f = focus, t = f.task; if(!t) return;
+  const isBreak = f.mode==="break" || f.mode==="doneBreak";
+  const phase = f.mode==="doneWork" ? "Session complete 🎉" : f.mode==="doneBreak" ? "Break's over"
+              : f.running ? (isBreak ? "Breathe…" : "Focusing") : (f.remaining < f.total ? "Paused" : "Ready when you are");
+  let ctl;
+  if(f.mode==="doneWork") ctl = `<button class="btn" id="fBreak">Take a ${FS().breakMin}-min break</button><button class="btn ghost" id="fAgain">Another round</button><button class="btn ghost" id="fClose">Close</button>`;
+  else if(f.mode==="doneBreak") ctl = `<button class="btn" id="fAgain">Start another session</button><button class="btn ghost" id="fClose">Close</button>`;
+  else if(f.running) ctl = `<button class="btn" id="fPause">Pause</button><button class="btn ghost" id="fStop">${isBreak?"Skip break":"Stop & save"}</button>`;
+  else if(f.remaining < f.total) ctl = `<button class="btn" id="fStart">Resume</button><button class="btn ghost" id="fStop">${isBreak?"Skip break":"Stop & save"}</button>`;
+  else ctl = `<button class="btn" id="fStart">Start focus</button><button class="btn ghost" id="fClose">Close</button>`;
+  const canPreset = !f.running && f.remaining===f.total && f.mode==="work";
+  const tm = focusMinutes(today(), t.id);
+  $("#focus").innerHTML = `
+  <div class="panel ${f.running?"running":""} ${isBreak?"brk":""}">
+    <div class="fhead"><span class="fkind">${isBreak?"Short break":"Focus session"}</span>
+      <button class="icon-btn sm" id="fMin" title="Minimise (Esc)"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button></div>
+    <h2 class="ftitle">${esc(t.title)}</h2>
+    <div>${tagPill(t.tag)}</div>
+    <div class="fring">
+      <div class="glow"></div>
+      <svg viewBox="0 0 280 280"><circle class="track" cx="140" cy="140" r="128"/>
+        <circle class="bar" id="fBar" cx="140" cy="140" r="128" stroke-dasharray="${FC.toFixed(2)}" stroke-dashoffset="${(FC*f.remaining/f.total).toFixed(2)}"/></svg>
+      <div class="mid"><div class="time" id="fTime">${fmtClock(f.remaining)}</div><div class="state">${phase}</div></div>
+    </div>
+    ${canPreset ? `<div class="chips fpresets" id="fPre">${[15,25,45,60].map(m=>`<button class="chip sm" data-m="${m}" aria-pressed="${f.preset===m}">${m} min</button>`).join("")}</div>` : ""}
+    <div class="fctl">${ctl}</div>
+    ${isBreak ? "" : `<div class="fauto" id="fAutoWrap"><button class="toggle" id="fAuto" aria-pressed="${f.autoDone}"><i></i></button>Tick the task off when the timer ends</div>`}
+    <p class="sub fmeta">${tm?`${fmtMin(tm)} focused on this today · `:""}Space to start or pause · Esc to minimise</p>
+  </div>`;
+  const on = (id, fn) => { const el = $(id); if(el) el.onclick = fn; };
+  on("#fMin", hideFocus); on("#fStart", focusStart); on("#fPause", focusPause); on("#fStop", focusStop);
+  on("#fClose", focusClose); on("#fBreak", startBreak); on("#fAgain", focusAgain);
+  on("#fAutoWrap", ()=>{
+    focus.autoDone = !focus.autoDone; $("#fAuto").setAttribute("aria-pressed", focus.autoDone);
+    state.settings.focus = { ...FS(), autoDone:focus.autoDone }; saveSettings();
+  });
+  if($("#fPre")) $("#fPre").onclick = e=>{
+    const b = e.target.closest(".chip"); if(!b) return;
+    focus.preset = +b.dataset.m; focus.total = focus.preset*60; focus.remaining = focus.total; renderFocus();
+  };
+}
+function requestNotify(){ try{ if("Notification" in window && Notification.permission==="default") Notification.requestPermission(); }catch(e){} }
+function notify(title, body){ try{ if("Notification" in window && Notification.permission==="granted" && document.hidden) new Notification(title, { body }); }catch(e){} }
+function focusStart(){
+  if(focus.running) return;
+  requestNotify();
+  focus.endAt = Date.now() + focus.remaining*1000; focus.running = true;
+  clearInterval(focus.iv); focus.iv = setInterval(focusTick, 250);
+  renderFocus(); updatePill();
+}
+function focusPause(){
+  if(!focus.running) return;
+  focus.remaining = Math.max(0, Math.ceil((focus.endAt - Date.now())/1000));
+  focus.running = false; clearInterval(focus.iv);
+  renderFocus(); updatePill();
+}
+function focusTick(){
+  focus.remaining = Math.max(0, Math.ceil((focus.endAt - Date.now())/1000));
+  const tm = $("#fTime"), bar = $("#fBar");
+  if(tm) tm.textContent = fmtClock(focus.remaining);
+  if(bar) bar.setAttribute("stroke-dashoffset", (FC*focus.remaining/focus.total).toFixed(2));
+  updatePill();
+  if(focus.remaining <= 0) focusFinish();
+}
+function logFocus(t, mins){
+  const d = today(), L = dayLog(d), e = L.e[t.id];
+  if(e) e.f = (e.f || 0) + mins;
+  else L.e[t.id] = { s:"open", n:"", f:mins, t:t.title, g:t.tag };
+  queueSaveMonth(ymOf(d));
+}
+function focusFinish(){
+  clearInterval(focus.iv); focus.running = false; focus.remaining = 0;
+  chime();
+  const t = focus.task;
+  if(focus.mode==="work"){
+    const mins = Math.round(focus.total/60);
+    logFocus(t, mins);
+    if(focus.autoDone && statusOf(today(), t.id)!=="done") setMark(today(), t, "done");
+    notify(`${t.title} — ${mins} min focused`, focus.autoDone ? "Ticked off. Take a short break?" : "Take a short break?");
+    focus.mode = "doneWork"; burst(); toast(`${mins} min focused on ${t.title}`);
+  }else{
+    notify("Break's over", "Ready for the next session?");
+    focus.mode = "doneBreak";
+  }
+  renderFocus(); updatePill();
+  if(state.tab==="today") viewToday();
+}
+function focusStop(){
+  const left = focus.running ? Math.max(0, Math.ceil((focus.endAt - Date.now())/1000)) : focus.remaining;
+  const elapsed = focus.total - left;
+  clearInterval(focus.iv); focus.running = false;
+  if(focus.mode==="work"){
+    if(elapsed >= 60){ const m = Math.floor(elapsed/60); logFocus(focus.task, m); toast(`Saved ${m} min of focus`); if(state.tab==="today") viewToday(); }
+    focus.remaining = focus.total;
+  }else{ focus.mode = "doneBreak"; focus.remaining = 0; }
+  renderFocus(); updatePill();
+}
+function focusClose(){
+  clearInterval(focus.iv); focus.running = false; focus.task = null; focus.mode = "work";
+  focus.total = focus.preset*60; focus.remaining = focus.total; hideFocus();
+}
+function startBreak(){ focus.mode = "break"; focus.total = FS().breakMin*60; focus.remaining = focus.total; focusStart(); }
+function focusAgain(){ focus.mode = "work"; focus.total = focus.preset*60; focus.remaining = focus.total; renderFocus(); updatePill(); }
+function chime(){
+  if(!FS().sound) return;
+  try{
+    const AC = window.AudioContext || window.webkitAudioContext; if(!AC) return;
+    const ctx = new AC();
+    [[660,0],[880,.16],[1320,.32]].forEach(([fq,t])=>{
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = "sine"; o.frequency.value = fq;
+      g.gain.setValueAtTime(.0001, ctx.currentTime+t);
+      g.gain.exponentialRampToValueAtTime(.16, ctx.currentTime+t+.02);
+      g.gain.exponentialRampToValueAtTime(.0001, ctx.currentTime+t+.6);
+      o.connect(g); g.connect(ctx.destination); o.start(ctx.currentTime+t); o.stop(ctx.currentTime+t+.65);
+    });
+    setTimeout(()=>ctx.close && ctx.close(), 1600);
+  }catch(e){}
+}
+window.addEventListener("beforeunload", e=>{ if(focus.running){ e.preventDefault(); e.returnValue = ""; } });
+
+/* ============================ confetti ============================ */
+function burst(){
+  if(reduced) return;
+  const cv = $("#confetti"); let ctx = null;
+  try{ ctx = cv.getContext("2d"); }catch(e){}
+  if(!ctx) return;
+  const dpr = window.devicePixelRatio || 1, W = innerWidth, H = innerHeight;
+  cv.width = W*dpr; cv.height = H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+  const cols = [accentHex(), ...tagList().map(t=>t.color).slice(0,5), "#ffffff"];
+  const P = Array.from({length:140}, ()=>({
+    x: W*.6 + (Math.random()-.5)*160, y: H*.34, vx:(Math.random()-.5)*15, vy:-Math.random()*14-4,
+    r: Math.random()*Math.PI, vr:(Math.random()-.5)*.32, w:5+Math.random()*6, h:8+Math.random()*9,
+    c: cols[(Math.random()*cols.length)|0]
+  }));
+  let f = 0;
+  const step = ()=>{
+    ctx.clearRect(0,0,W,H);
+    P.forEach(p=>{
+      p.vy += .38; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.r += p.vr;
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.r); ctx.globalAlpha = Math.max(0, 1 - f/130);
+      ctx.fillStyle = p.c; ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h); ctx.restore();
+    });
+    if(++f < 135) requestAnimationFrame(step); else ctx.clearRect(0,0,W,H);
+  };
+  requestAnimationFrame(step);
+}
+
+/* ============================ Settings ============================ */
+function syncPrefs(){
+  DAY_END_H = Math.min(4, Math.max(0, +state.settings.dayEnd || 0));
+  WEEK_START = state.settings.weekStart===0 ? 0 : 1;
+  state.dayKey = today();
+  if(!sessionLive()){
+    const fs = FS();
+    focus.preset = fs.preset; focus.autoDone = fs.autoDone;
+    if(!focus.task){ focus.total = fs.preset*60; focus.remaining = focus.total; }
+  }
+}
+function viewSettings(){
+  const s = state.settings, fs = FS(), rest = currentRest();
+  $("#h-title").textContent = "Settings";
+  $("#h-sub").textContent = "Make the app fit your routine";
+  const tagCount = name => state.tasks.filter(t=>!t.removed && t.tag===name).length;
+  const tagsHTML = () => tagList().map(t=>{ const n = tagCount(t.name); return `
+    <div class="tagedit">
+      <input type="color" value="${t.color}" data-color="${esc(t.name)}" title="Colour for ${esc(t.name)}">
+      <span class="nm">${esc(t.name)}<small>${n ? `${n} habit${n===1?"":"s"}` : "not used yet"}</small></span>
+      <button class="icon-btn sm" data-rmtag="${esc(t.name)}" title="Remove tag"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>`; }).join("");
+  const chipRow = (id, items, cur) => `<div class="chips" id="${id}">${items.map(([v,l])=>`<button class="chip sm" data-v="${v}" aria-pressed="${String(cur)===String(v)}">${l}</button>`).join("")}</div>`;
+  const hourLbl = h => h===0 ? "Midnight" : `${h} am`;
+  const past = (s.rest||[]).filter(p=>p.to && p.to < today()).slice(-3).reverse();
+  const keys = [["1 – 6","Switch screens"],["N","New task"],["A","Quick add on Today"],["/","Search Today"],["F","Focus on the next open task"],["T","Change theme"],["Space","Start or pause the timer"],["Esc","Close a dialog or minimise the timer"]];
+
+  paint(`
+  <div class="cols c">
+    <div class="stack">
+      <div class="card">
+        <div class="card-head"><h2>Appearance</h2></div>
+        <div class="settings-theme" id="themeChoices">
+          ${[["system","System"],["light","Light"],["dark","Dark"]].map(([id,label])=>`<button class="chip" data-theme="${id}" aria-pressed="${s.theme===id}">${label}</button>`).join("")}
+        </div>
+        <label class="fld" style="margin-top:18px">Accent colour</label>
+        <div class="swatches" id="sw">
+          ${SWATCHES.map(x=>`<button class="sw" data-c="${x.color}" style="--swatch:${x.color}" aria-pressed="${s.accent.toLowerCase()===x.color}" title="${x.name}" aria-label="${x.name} accent">${x.name}</button>`).join("")}
+          <label class="sw custom" for="custom" title="Choose a custom accent">Custom <input type="color" id="custom" value="${accentHex()}" aria-label="Custom accent" style="position:absolute;opacity:0;width:1px;height:1px"></label>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>Your day</h2></div>
+        <div class="set-row">
+          <div class="lbl">Day ends at<small>Anything you tick before this time still counts for the day before. Useful if you work late.</small></div>
+          ${chipRow("dayEndC", [0,1,2,3,4].map(h=>[h,hourLbl(h)]), DAY_END_H)}
+        </div>
+        <div class="set-row">
+          <div class="lbl">Week starts on<small>Sets the Month grid and when weekly targets reset. Best changed at the start of a week.</small></div>
+          ${chipRow("weekC", [[1,"Monday"],[0,"Sunday"]], WEEK_START)}
+        </div>
+        <div class="switch"><span class="lbl">Group tasks by tag<small>Kicks in when more than five tasks are open</small></span>
+          <button class="toggle" id="grpT" aria-pressed="${s.groupByTag!==false}" aria-label="Group tasks by tag"><i></i></button></div>
+        <div class="switch"><span class="lbl">Mood check-in<small>Show the mood row on Today</small></span>
+          <button class="toggle" id="moodT" aria-pressed="${s.mood}" aria-label="Mood check-in"><i></i></button></div>
+        <div class="set-row" style="border-bottom:0;padding-bottom:0">
+          <div class="lbl">Opening screen</div>
+          <div class="chips" id="startC">${TABS.map(([id,label])=>`<button class="chip sm" data-s="${id}" aria-pressed="${s.startTab===id}">${label}</button>`).join("")}</div>
+        </div>
+      </div>
+
+      <div class="card ${rest?"rest-card":""}">
+        <div class="card-head"><h2>Rest mode</h2><span>${rest?"on":"off"}</span></div>
+        ${rest ? `
+          <p class="sub" style="margin-bottom:14px">🏖️ Resting since ${prettyDate(rest.from)}${rest.to?`, until ${prettyDate(rest.to)}`:""}. Habits are optional and streaks are paused.</p>
+          <button class="btn wide" id="endRest">End rest mode</button>` : `
+          <p class="sub" style="margin-bottom:14px">Sick, travelling or in exams? Pause everything. Nothing counts as missed and your streaks wait for you.</p>
+          <div class="fld-wrap"><label class="fld" for="restTo">Until <span style="color:var(--ink-3)">— optional, leave empty to end it yourself</span></label>
+            <input type="date" id="restTo" min="${today()}"></div>
+          <button class="btn wide" id="startRest">Start rest from today</button>`}
+        ${past.length ? `<p class="sub" style="margin-top:14px">Earlier: ${past.map(p=>`${prettyDate(p.from)} to ${prettyDate(p.to)}`).join(", ")}</p>` : ""}
+      </div>
+    </div>
+
+    <div class="stack">
+      ${appCardHTML()}
+      <div class="card">
+        <div class="card-head"><h2>Focus timer</h2></div>
+        <div class="set-row"><div class="lbl">Default length</div>${chipRow("fLenC", [15,25,45,60].map(m=>[m,`${m} min`]), fs.preset)}</div>
+        <div class="set-row"><div class="lbl">Break length</div>${chipRow("fBrkC", [5,10,15].map(m=>[m,`${m} min`]), fs.breakMin)}</div>
+        <div class="switch"><span class="lbl">Tick the task off when time's up</span>
+          <button class="toggle" id="fAutoT" aria-pressed="${fs.autoDone}" aria-label="Auto tick"><i></i></button></div>
+        <div class="switch" style="border-bottom:0"><span class="lbl">Chime at the end<small>A soft three-note sound</small></span>
+          <button class="toggle" id="fSoundT" aria-pressed="${fs.sound}" aria-label="Chime"><i></i></button></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>Tags</h2><span>${tagList().length}</span></div>
+        <div id="tagList">${tagsHTML()}</div>
+        <div class="tagadd"><input type="text" id="newTag" maxlength="18" placeholder="Add a tag — fitness, deen, thesis…"><button class="btn tiny" id="addTag">Add</button></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>Keyboard</h2></div>
+        <div class="keys-list">${keys.map(([k,d])=>`<kbd>${k}</kbd><span>${d}</span>`).join("")}</div>
+        <p class="sub" style="margin-top:16px">Your data is saved in ${BACKEND_LABEL}. Backups and CSV files are on the <a href="#" id="toExport" style="color:var(--accent)">Export</a> screen.</p>
+      </div>
+    </div>
+  </div>`);
+
+  const pick = (id, fn) => $("#"+id).addEventListener("click", e=>{
+    const b = e.target.closest(".chip"); if(!b) return;
+    $("#"+id).querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed", c===b));
+    fn(b.dataset.v);
+  });
+  pick("dayEndC", v=>{ s.dayEnd = +v; syncPrefs(); saveSettings(); toast(+v ? `Your day now ends at ${v} am 🌙` : "Your day ends at midnight"); });
+  pick("weekC", v=>{ s.weekStart = +v; syncPrefs(); saveSettings(); toast(`Weeks start on ${+v ? "Monday" : "Sunday"}`); });
+  pick("fLenC", v=>{ s.focus = { ...FS(), preset:+v }; syncPrefs(); saveSettings(); toast(`Focus sessions default to ${v} min`); });
+  pick("fBrkC", v=>{ s.focus = { ...FS(), breakMin:+v }; saveSettings(); toast(`Breaks last ${v} min`); });
+  $("#fAutoT").onclick = e=>{ s.focus = { ...FS(), autoDone:!FS().autoDone }; syncPrefs(); saveSettings(); e.currentTarget.setAttribute("aria-pressed", FS().autoDone); };
+  $("#fSoundT").onclick = e=>{ s.focus = { ...FS(), sound:!FS().sound }; saveSettings(); e.currentTarget.setAttribute("aria-pressed", FS().sound); if(FS().sound) chime(); };
+  $("#grpT").onclick = e=>{ s.groupByTag = !(s.groupByTag!==false); e.currentTarget.setAttribute("aria-pressed", s.groupByTag); saveSettings(); };
+  $("#moodT").onclick = e=>{ s.mood = !s.mood; e.currentTarget.setAttribute("aria-pressed", s.mood); saveSettings(); };
+  $("#startC").addEventListener("click", e=>{
+    const b = e.target.closest(".chip"); if(!b) return;
+    s.startTab = b.dataset.s; saveSettings();
+    $("#startC").querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed", c===b));
+  });
+  $("#themeChoices").addEventListener("click", e=>{
+    const b = e.target.closest("[data-theme]"); if(!b) return;
+    s.theme = b.dataset.theme; saveSettings(); applyTheme(true);
+    $("#themeChoices").querySelectorAll("[data-theme]").forEach(x=>x.setAttribute("aria-pressed", x===b));
+  });
+  $("#sw").addEventListener("click", e=>{
+    const b = e.target.closest("button.sw"); if(!b) return;
+    s.accent = b.dataset.c; saveSettings(); applyTheme(true);
+    $("#sw").querySelectorAll(".sw").forEach(x=>x.setAttribute("aria-pressed", x===b));
+  });
+  $("#custom").addEventListener("input", e=>{
+    s.accent = e.target.value; saveSettings(); applyTheme();
+    $("#sw").querySelectorAll(".sw").forEach(x=>x.setAttribute("aria-pressed","false"));
+  });
+  if($("#startRest")) $("#startRest").onclick = ()=>{
+    const to = $("#restTo").value || null;
+    if(to && to < today()){ toast("Pick today or a later date"); return; }
+    s.rest = [...(s.rest||[]), { from:today(), to }];
+    saveSettings(); toast("Rest mode on — enjoy the break 🏖️"); viewSettings();
+  };
+  if($("#endRest")) $("#endRest").onclick = ()=>{ endRest(); viewSettings(); };
+  $("#toExport").onclick = e=>{ e.preventDefault(); go("export"); };
+  bindAppCard();
+  if(pwa.usage==null) refreshStorageInfo().then(()=>{ if(state.tab==="settings" && pwa.usage!=null) viewSettings(); });
+
+  const bindTagRows = () => {
+    $("#tagList").querySelectorAll("[data-color]").forEach(inp=>inp.addEventListener("input", e=>{
+      const t = tagList().find(x=>x.name===inp.dataset.color);
+      if(t){ t.color = e.target.value; s.tags = tagList(); saveSettings(); }
+    }));
+    $("#tagList").querySelectorAll("[data-rmtag]").forEach(b=>b.addEventListener("click", ()=>{
+      if(tagList().length <= 1){ toast("Keep at least one tag"); return; }
+      s.tags = tagList().filter(x=>x.name!==b.dataset.rmtag);
+      saveSettings(); $("#tagList").innerHTML = tagsHTML(); bindTagRows(); toast("Tag removed — tasks keep their label");
+    }));
+  };
+  bindTagRows();
+  const addTag = () => {
+    const name = $("#newTag").value.trim().toLowerCase(); if(!name) return;
+    if(tagList().some(t=>t.name===name)){ toast("That tag already exists"); return; }
+    s.tags = [...tagList(), { name, color: tagColor(name).startsWith("#") ? tagColor(name) : "#7b9e8f" }];
+    saveSettings(); $("#newTag").value = ""; $("#tagList").innerHTML = tagsHTML(); bindTagRows(); toast(`Added "${name}"`);
+  };
+  $("#addTag").onclick = addTag;
+  $("#newTag").addEventListener("keydown", e=>{ if(e.key==="Enter") addTag(); });
+}
+$("#themeBtn").addEventListener("click", ()=>{
+  const order = ["system","light","dark"];
+  state.settings.theme = order[(order.indexOf(state.settings.theme)+1)%3];
+  saveSettings(); applyTheme(true); toast(`Theme: ${state.settings.theme}`);
+});
+
+/* ============================ PWA ============================ */
+const pwa = { installEvt:null, updateReady:null, persisted:null, usage:null };
+const isStandalone = () => { try{ return window.matchMedia("(display-mode: standalone)").matches || navigator.standalone===true; }catch(e){ return false; } };
+/* The browser itself decides what counts as secure — this also covers a local server
+   allowed through Chrome's "Insecure origins treated as secure" flag. */
+const canUseSW = () => "serviceWorker" in navigator &&
+  (typeof isSecureContext === "boolean" ? isSecureContext
+   : location.protocol==="https:" || ["localhost","127.0.0.1"].includes(location.hostname));
+function offerUpdate(worker){
+  pwa.updateReady = worker;
+  toast("A new version is ready", "Update", ()=>worker.postMessage({ type:"SKIP_WAITING" }));
+  if(state.tab==="settings") viewSettings();
+}
+if(canUseSW()){
+  window.addEventListener("load", async ()=>{
+    try{
+      const reg = await navigator.serviceWorker.register("sw.js");
+      if(reg.waiting && navigator.serviceWorker.controller) offerUpdate(reg.waiting);
+      reg.addEventListener("updatefound", ()=>{
+        const w = reg.installing; if(!w) return;
+        w.addEventListener("statechange", ()=>{ if(w.state==="installed" && navigator.serviceWorker.controller) offerUpdate(w); });
+      });
+      let reloading = false;
+      navigator.serviceWorker.addEventListener("controllerchange", ()=>{ if(reloading) return; reloading = true; location.reload(); });
+      setInterval(()=>reg.update().catch(()=>{}), 60*60*1000);      // look for a new version hourly
+    }catch(e){ /* offline or blocked — the app still works */ }
+  });
+}
+window.addEventListener("beforeinstallprompt", e=>{ e.preventDefault(); pwa.installEvt = e; if(state.tab==="settings") viewSettings(); });
+window.addEventListener("appinstalled", ()=>{ pwa.installEvt = null; toast("Installed 🎉 Daily Log is on your home screen"); protectStorage(); if(state.tab==="settings") viewSettings(); });
+async function installApp(){
+  if(!pwa.installEvt) return;
+  pwa.installEvt.prompt();
+  try{ await pwa.installEvt.userChoice; }catch(e){}
+  pwa.installEvt = null;
+  if(state.tab==="settings") viewSettings();
+}
+async function refreshStorageInfo(){
+  try{
+    if(navigator.storage && navigator.storage.persisted) pwa.persisted = await navigator.storage.persisted();
+    if(navigator.storage && navigator.storage.estimate){ const e = await navigator.storage.estimate(); pwa.usage = e.usage || 0; }
+  }catch(e){}
+}
+async function protectStorage(){
+  try{
+    if(navigator.storage && navigator.storage.persist){ pwa.persisted = await navigator.storage.persist(); }
+  }catch(e){}
+  return pwa.persisted;
+}
+function appCardHTML(){
+  const installed = isStandalone();
+  const status = installed ? "Running as an installed app ✓"
+    : pwa.installEvt ? "Ready to install on this device"
+    : canUseSW() ? "Install it from your browser menu"
+    : "Open the hosted link to install";
+  const how = installed ? ""
+    : pwa.installEvt ? `<button class="btn wide" id="installBtn">Install Daily Log</button>`
+    : canUseSW() ? `<p class="sub">On Android, open Chrome's <b>⋮</b> menu and tap <b>Install app</b> or <b>Add to Home screen</b>. On a computer, use the install icon at the right of the address bar.</p>`
+    : `<p class="sub">Installing needs a secure address — <b>https://</b> or <b>localhost</b>. Right now this is <b>${esc(location.protocol + "//" + (location.host || "file"))}</b>, so the app runs but can't be installed or work offline.</p>`;
+  const kb = pwa.usage==null ? "" : ` · using ${pwa.usage < 1048576 ? Math.max(1,Math.round(pwa.usage/1024)) + " KB" : (pwa.usage/1048576).toFixed(1) + " MB"}`;
+  const protect = pwa.persisted===true ? `<p class="sub" style="margin-top:14px">🛡️ Your data is protected from automatic cleanup${kb}.</p>`
+    : (navigator.storage && navigator.storage.persist) ? `<div class="switch" style="border-bottom:0;margin-top:6px"><span class="lbl">Protect my data<small>Asks the browser not to clear it when space runs low${kb}</small></span><button class="btn ghost tiny" id="persistBtn">Protect</button></div>` : "";
+  const upd = pwa.updateReady ? `<button class="btn ghost wide" id="updateBtn" style="margin-top:12px">Update to the new version</button>` : "";
+  return `<div class="card">
+      <div class="card-head"><h2>App</h2><span>${installed ? "installed" : "web"}</span></div>
+      <p class="sub" style="margin-bottom:${how?"14px":"0"}">${status}</p>
+      ${how}${upd}${protect}
+    </div>`;
+}
+function bindAppCard(){
+  if($("#installBtn")) $("#installBtn").onclick = installApp;
+  if($("#updateBtn")) $("#updateBtn").onclick = ()=>pwa.updateReady && pwa.updateReady.postMessage({ type:"SKIP_WAITING" });
+  if($("#persistBtn")) $("#persistBtn").onclick = async ()=>{
+    const ok = await protectStorage(); await refreshStorageInfo();
+    toast(ok ? "Protected 🛡️ your data won't be auto-cleared" : "The browser said no for now — installing the app usually allows it");
+    viewSettings();
+  };
+}
+
+/* ============================ boot ============================ */
+(async function boot(){
+  const [st, tk] = await Promise.all([S.get(K.settings), S.get(K.tasks)]);
+  if(st) Object.assign(state.settings, st);
+  if(Array.isArray(tk)) state.tasks = tk;
+  syncPrefs(); state.cursor = nowD();
+  if(!state.tasks.length && !st){
+    const seed = [["Move for 20 minutes","health","walk to the corner and back"],["Read a few pages","mind","read 1 page"],["Deep work block","work",""],["Tidy one small thing","home",""]];
+    state.tasks = seed.map(([title,tag,mini])=>{ const t = { id:uid(), title, tag, repeat:"daily", created:today() }; if(mini) t.mini = mini; return t; });
+    await saveTasks();
+  }
+  if(!Array.isArray(state.settings.tags) || !state.settings.tags.length){
+    const tags = DEFAULT_TAGS.map(t=>({...t}));
+    state.tasks.forEach(t=>{ if(!tags.some(x=>x.name===t.tag)) tags.push({ name:t.tag, color:"#7b9e8f" }); });
+    state.settings.tags = tags; await saveSettings();
+  }
+  applyTheme();
+  await ensureMonth(ymOf(today()));
+  const n = await rollover();
+  const linkTab = new URLSearchParams(location.search).get("tab");
+  state.tab = TABS.some(t=>t[0]===linkTab) ? linkTab : (state.settings.startTab || "today");
+  if(isStandalone()) protectStorage();
+  paintRail(true);
+  await go(state.tab);
+  if(n) toast(`${n} unchecked task${n===1?"":"s"} from earlier days marked missed`);
+  if(BACKEND==="memory") toast("Preview only — open the file in your browser to save data");
+})();
+</script>
+</body>
+</html>
