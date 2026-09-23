@@ -1,7 +1,7 @@
 /* Daily Log — service worker.
    Makes the app open instantly and work with no internet.
    Bump VERSION with every release: phones then see "A new version is ready — Update". */
-const VERSION = "daily-log-v1";
+const VERSION = "daily-log-v2";
 const SHELL = [
   "./",
   "./index.html",
