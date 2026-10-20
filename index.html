@@ -329,13 +329,6 @@ tbody tr:hover{background:var(--hover)}
 .sw:hover{transform:translateY(-2px)}
 .sw[aria-pressed="true"]{border:2px solid var(--ink);box-shadow:0 0 0 2px var(--bg-b),0 0 0 4px var(--ink)}
 .sw.custom{align-items:center;color:var(--ink);text-shadow:none;background:var(--shade)}
-.settings-dialog{overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box;max-width:calc(100vw - 28px)}
-.settings-dialog *{box-sizing:border-box;min-width:0;max-width:100%}
-.settings-dialog .settings-theme,.settings-dialog .chips{width:100%;}
-.settings-dialog .chips{display:flex;flex-wrap:wrap;gap:8px}
-.settings-dialog .chips .chip{max-width:100%;}
-.settings-dialog .tagadd{min-width:0}
-.settings-dialog .tagadd input{min-width:0;flex:1}
 
 .tagedit{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--hairline)}
 .tagedit .nm{flex:1;font-size:13.5px}
@@ -352,18 +345,8 @@ tbody tr:hover{background:var(--hover)}
 .dialog.on{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
 .dialog h3{margin:0 0 4px;font-size:20px;font-weight:600;letter-spacing:-.4px}
 .dialog .sub{margin-bottom:20px}
-.settings-dialog{width:min(620px,calc(100vw - 28px));padding:22px;max-height:84vh}
-.settings-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding-bottom:17px;margin-bottom:8px;border-bottom:1px solid var(--hairline)}
-.settings-hero h3{font-size:22px;margin-bottom:5px}
-.settings-section{padding:15px 0;border-bottom:1px solid var(--hairline)}
-.settings-section:last-of-type{border-bottom:0}
-.settings-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:11px}
-.settings-section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3)}
-.settings-section-desc{font-size:11.5px;color:var(--ink-3);margin-top:2px}
 .settings-theme{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .settings-theme .chip{justify-content:center;min-height:38px}
-.settings-footer{display:flex;justify-content:flex-end;padding-top:15px}
-@media(max-width:560px){.settings-dialog{padding:18px}.settings-theme{grid-template-columns:1fr 1fr}.settings-theme .chip:last-child{grid-column:1/-1}}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .sc-prev{display:grid;place-items:center;min-height:200px;margin-bottom:16px}
 .sc-prev img{max-width:100%;max-height:52vh;border-radius:16px;box-shadow:0 20px 40px -20px rgba(0,0,0,.6);animation:rise .5s var(--ease) both}
@@ -689,7 +672,6 @@ const wait = ms => new Promise(r=>setTimeout(r,ms));
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 const DOW_SHORT = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-const DOW_ORDER = [1,2,3,4,5,6,0];
 let DAY_END_H = 0;                               // "Day ends at" — 0 = midnight, up to 4 am
 let WEEK_START = 1;                              // 1 = Monday, 0 = Sunday
 const nowD = () => new Date(Date.now() - DAY_END_H*3600e3);
@@ -789,7 +771,6 @@ function isExpected(t, ds){
   return false;                                   // weekly: never "due" on a specific day
 }
 function expected(ds){ return state.tasks.filter(t=>isExpected(t, ds)); }
-const scheduled = expected;
 function weekStart(ds){ const d=parseKey(ds); return keyOf(shift(d, -((d.getDay()-WEEK_START+7)%7))); }
 function weekQuota(t, mon){
   let active = 0;
@@ -852,7 +833,6 @@ function setMark(date, task, s){
   else delete L.e[task.id];
   queueSaveMonth(ymOf(date));
 }
-const setDone = (date, task, on) => setMark(date, task, on ? "done" : null);
 
 /* Closed days are read strictly from what was recorded, so editing a schedule
    never rewrites history. Today (and later) uses the live schedule. */
@@ -1107,37 +1087,7 @@ async function viewToday(){
     meta: status==="done" ? "Completed" : status==="mini" ? `Mini${t.mini?` · ${t.mini}`:""}` : (meta || schedText(t) + (t.mini?` · mini: ${t.mini}`:""))
   });
 
-  let openBlock;
-  if(!open.length){
-    openBlock = exp.length
-      ? `<div class="card empty"><p>All clear 🌿</p><small>Everything due today is checked off.</small></div>`
-      : (weekly.length ? "" : `<div class="card empty"><p>No tasks yet</p><small>Add one to start building the record.</small></div>`);
-  }else if(state.settings.groupByTag!==false && open.length > 5){
-    const order = tagList().map(t=>t.name), groups = {};
-    open.forEach(t=>{ (groups[t.tag] = groups[t.tag] || []).push(t); });
-    const names = Object.keys(groups).sort((a,b)=>{
-      const ia = order.indexOf(a), ib = order.indexOf(b);
-      return (ia<0?99:ia) - (ib<0?99:ib) || a.localeCompare(b);
-    });
-    openBlock = names.map(g=>{
-      const all = exp.filter(t=>t.tag===g);
-      const gd = all.filter(logged).length;
-      return `<div class="group-head"><i class="dot" style="background:${tagColor(g)}"></i>${esc(g)}<span class="count">${gd}/${all.length}</span></div>
-        ${groups[g].map(t=>rowOf(t,null)).join("")}`;
-    }).join("");
-  }else{
-    openBlock = `<div class="section-label"><span>Open · ${open.length}</span><span>tick to complete</span></div>
-      ${open.map(t=>rowOf(t,null)).join("")}`;
-  }
-
   const mon = weekStart(date);
-  const weeklyBlock = wOpen.length ? `
-    <div class="section-label" style="margin-top:22px"><span>Flexible this week · ${wOpen.length}</span><span>counts toward a weekly target</span></div>
-    ${wOpen.map(t=>{
-      const q = weekQuota(t, mon), c = weekCount(t, mon, date);
-      return rowOf(t, null, c>=q ? `${c}/${q} this week · target met ✓` : `${c}/${q} this week`);
-    }).join("")}` : "";
-
   const matches = t => {
     const q = state.taskQuery.trim().toLowerCase();
     const tagOK = state.taskTag==="all" || t.tag===state.taskTag;
@@ -1148,20 +1098,30 @@ async function viewToday(){
   const vWeekly = wOpen.filter(matches);
   const vDone = doneList.filter(matches);
   const tagFilters = tagList().filter(t=>[...exp,...weekly,...doneList].some(x=>x.tag===t.name));
+  const tagOrder = tagList().map(t=>t.name);
+  const byTagOrder = (a,b)=>{
+    const ia = tagOrder.indexOf(a), ib = tagOrder.indexOf(b);
+    return (ia<0?99:ia) - (ib<0?99:ib) || a.localeCompare(b);
+  };
 
-  const filteredOpenBlock = !vOpen.length
-    ? (open.length ? `<div class="card empty quick-empty"><p>No matching tasks</p><small>Try another search or tag.</small></div>` : openBlock)
-    : (state.settings.groupByTag!==false && vOpen.length > 5
-      ? [...new Set(vOpen.map(t=>t.tag))].sort((a,b)=>a.localeCompare(b)).map(g=>{
-          const all = exp.filter(t=>t.tag===g);
-          const gd = all.filter(logged).length;
-          return `<div class="group-head"><i class="dot" style="background:${tagColor(g)}"></i>${esc(g)}<span class="count">${gd}/${all.length}</span></div>
-            ${vOpen.filter(t=>t.tag===g).map(t=>rowOf(t,null)).join("")}`;
-        }).join("")
-      : `<div class="section-label"><span>Open · ${vOpen.length}</span><span>tick to complete</span></div>
-         ${vOpen.map(t=>rowOf(t,null)).join("")}`);
+  let openBlock;
+  if(!vOpen.length){
+    openBlock = open.length ? `<div class="card empty quick-empty"><p>No matching tasks</p><small>Try another search or tag.</small></div>`
+      : exp.length ? `<div class="card empty"><p>All clear 🌿</p><small>Everything due today is checked off.</small></div>`
+      : weekly.length ? ""
+      : `<div class="card empty"><p>No tasks yet</p><small>Add one to start building the record.</small></div>`;
+  }else if(state.settings.groupByTag!==false && vOpen.length > 5){
+    openBlock = [...new Set(vOpen.map(t=>t.tag))].sort(byTagOrder).map(g=>{
+      const all = exp.filter(t=>t.tag===g);
+      return `<div class="group-head"><i class="dot" style="background:${tagColor(g)}"></i>${esc(g)}<span class="count">${all.filter(logged).length}/${all.length}</span></div>
+        ${vOpen.filter(t=>t.tag===g).map(t=>rowOf(t,null)).join("")}`;
+    }).join("");
+  }else{
+    openBlock = `<div class="section-label"><span>Open · ${vOpen.length}</span><span>tick to complete</span></div>
+      ${vOpen.map(t=>rowOf(t,null)).join("")}`;
+  }
 
-  const filteredWeeklyBlock = vWeekly.length ? `
+  const weeklyBlock = vWeekly.length ? `
     <div class="section-label" style="margin-top:22px"><span>${resting?"Optional today":"Flexible this week"} · ${vWeekly.length}</span><span>${resting?"rest day — nothing counts as missed":"counts toward a weekly target"}</span></div>
     ${vWeekly.map(t=>{
       if(resting) return rowOf(t, null, "Optional · rest day");
@@ -1169,7 +1129,7 @@ async function viewToday(){
       return rowOf(t, null, c>=q ? `${c}/${q} this week · target met ✓` : `${c}/${q} this week`);
     }).join("")}` : "";
 
-  const filteredDoneBlock = vDone.length ? `
+  const doneBlock = vDone.length ? `
     <div class="section-label" style="margin-top:22px"><span>Done today · ${vDone.length}</span></div>
     ${vDone.map(t=>rowOf(t, statusOf(date,t.id))).join("")}` : "";
 
@@ -1231,7 +1191,7 @@ async function viewToday(){
         <button class="chip sm" data-filter-tag="all" aria-pressed="${state.taskTag==="all"}">All</button>
         ${tagFilters.map(t=>`<button class="chip sm" data-filter-tag="${esc(t.name)}" aria-pressed="${state.taskTag===t.name}"><i style="background:${t.color}"></i>${esc(t.name)}</button>`).join("")}
       </div>` : ""}
-      ${filteredOpenBlock}${filteredWeeklyBlock}${filteredDoneBlock}
+      ${openBlock}${weeklyBlock}${doneBlock}
     </div>
   </div>`);
 
